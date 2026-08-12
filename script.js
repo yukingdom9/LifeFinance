@@ -555,13 +555,26 @@ w.principal.addEventListener("input", () => {
 // 取崩フェーズ: 定率取崩 / 定額取崩の切り替え
 // =====================================================================
 
-function positionModeToggleIndicator() {
+function positionModeToggleIndicator(instant = false) {
   const activeBtn = withdrawalMode === "rate" ? modeRateBtn : modeFixedBtn;
+
+  if (instant) {
+    // 初期表示時はトランジションを一時的に無効化し、パッと出た状態にする。
+    modeToggleIndicator.style.transition = "none";
+  }
+
   modeToggleIndicator.style.width = `${activeBtn.offsetWidth}px`;
   modeToggleIndicator.style.transform = `translateX(${activeBtn.offsetLeft}px)`;
+
+  if (instant) {
+    // 強制リフローで「transition: none」を確実に適用してから元に戻す。
+    modeToggleIndicator.offsetHeight;
+    modeToggleIndicator.style.transition = "";
+  }
 }
 
-function setWithdrawalMode(mode) {
+function setWithdrawalMode(mode, options = {}) {
+  const { instant = false } = options;
   withdrawalMode = mode;
 
   modeRateBtn.classList.toggle("active", mode === "rate");
@@ -569,7 +582,7 @@ function setWithdrawalMode(mode) {
   modeFixedBtn.classList.toggle("active", mode === "fixed");
   modeFixedBtn.setAttribute("aria-pressed", String(mode === "fixed"));
 
-  positionModeToggleIndicator();
+  positionModeToggleIndicator(instant);
 
   w.rateModeControl.classList.toggle("hidden", mode !== "rate");
   w.fixedModeControl.classList.toggle("hidden", mode !== "fixed");
@@ -585,7 +598,7 @@ function setWithdrawalMode(mode) {
 
 modeRateBtn.addEventListener("click", () => setWithdrawalMode("rate"));
 modeFixedBtn.addEventListener("click", () => setWithdrawalMode("fixed"));
-window.addEventListener("resize", positionModeToggleIndicator);
+window.addEventListener("resize", () => positionModeToggleIndicator(true));
 
 // =====================================================================
 // フェーズ間の連携ロジック: 積立の最終残高 → 取崩の元本
@@ -1005,7 +1018,7 @@ applyParsedState(parseQueryState());
 // ここで補う。
 w.principal.disabled = isLinked;
 linkedReadout.classList.toggle("active", isLinked);
-setWithdrawalMode(withdrawalMode);
+setWithdrawalMode(withdrawalMode, { instant: true });
 renderAccumulate();
 if (!isLinked) {
   renderWithdraw();
