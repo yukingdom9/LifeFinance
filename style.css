@@ -390,6 +390,7 @@ canvas {
 /* Mode toggle (定率取崩 / 定額取崩) inside stage 2 */
 
 .mode-toggle {
+  position: relative;
   display: inline-flex;
   padding: 4px;
   margin-bottom: 20px;
@@ -399,7 +400,22 @@ canvas {
   gap: 4px;
 }
 
+.mode-toggle-indicator {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  bottom: 4px;
+  width: 0;
+  background: #336485;
+  border-radius: 10px;
+  transform: translateX(0);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
 .mode-btn {
+  position: relative;
+  z-index: 1;
   border: none;
   background: transparent;
   color: #5b6b82;
@@ -408,7 +424,7 @@ canvas {
   padding: 9px 16px;
   border-radius: 10px;
   cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition: color 0.2s ease;
 }
 
 .mode-btn:hover {
@@ -416,7 +432,6 @@ canvas {
 }
 
 .mode-btn.active {
-  background: #336485;
   color: #ffffff;
 }
 

@@ -164,6 +164,7 @@ const w = {
 
 const modeRateBtn = document.getElementById("mode-rate-btn");
 const modeFixedBtn = document.getElementById("mode-fixed-btn");
+const modeToggleIndicator = document.getElementById("mode-toggle-indicator");
 const totalWithdrawalLabel = document.getElementById("total-withdrawal-label");
 
 const linkToggle = document.getElementById("link-toggle");
@@ -554,6 +555,12 @@ w.principal.addEventListener("input", () => {
 // 取崩フェーズ: 定率取崩 / 定額取崩の切り替え
 // =====================================================================
 
+function positionModeToggleIndicator() {
+  const activeBtn = withdrawalMode === "rate" ? modeRateBtn : modeFixedBtn;
+  modeToggleIndicator.style.width = `${activeBtn.offsetWidth}px`;
+  modeToggleIndicator.style.transform = `translateX(${activeBtn.offsetLeft}px)`;
+}
+
 function setWithdrawalMode(mode) {
   withdrawalMode = mode;
 
@@ -561,6 +568,8 @@ function setWithdrawalMode(mode) {
   modeRateBtn.setAttribute("aria-pressed", String(mode === "rate"));
   modeFixedBtn.classList.toggle("active", mode === "fixed");
   modeFixedBtn.setAttribute("aria-pressed", String(mode === "fixed"));
+
+  positionModeToggleIndicator();
 
   w.rateModeControl.classList.toggle("hidden", mode !== "rate");
   w.fixedModeControl.classList.toggle("hidden", mode !== "fixed");
@@ -576,6 +585,7 @@ function setWithdrawalMode(mode) {
 
 modeRateBtn.addEventListener("click", () => setWithdrawalMode("rate"));
 modeFixedBtn.addEventListener("click", () => setWithdrawalMode("fixed"));
+window.addEventListener("resize", positionModeToggleIndicator);
 
 // =====================================================================
 // フェーズ間の連携ロジック: 積立の最終残高 → 取崩の元本
