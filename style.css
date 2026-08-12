@@ -163,7 +163,7 @@ input[type="range"]:disabled {
 }
 
 .summary-grid-4 {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 }
 
 .summary-card {
@@ -385,6 +385,43 @@ canvas {
 .switch input:focus-visible + .switch-track {
   outline: 2px solid #336485;
   outline-offset: 2px;
+}
+
+/* Mode toggle (定率取崩 / 定額取崩) inside stage 2 */
+
+.mode-toggle {
+  display: inline-flex;
+  padding: 4px;
+  margin-bottom: 20px;
+  background: #f4f6fb;
+  border: 1px solid #dbe2ec;
+  border-radius: 14px;
+  gap: 4px;
+}
+
+.mode-btn {
+  border: none;
+  background: transparent;
+  color: #5b6b82;
+  font-weight: 700;
+  font-size: 0.88rem;
+  padding: 9px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.mode-btn:hover {
+  color: #1f2d3d;
+}
+
+.mode-btn.active {
+  background: #336485;
+  color: #ffffff;
+}
+
+.hidden {
+  display: none !important;
 }
 
 /* Linked-principal readout inside stage 2 */

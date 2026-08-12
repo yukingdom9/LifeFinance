@@ -57,6 +57,65 @@ function clamp(value, min, max) {
   return Number.isNaN(value) ? min : Math.min(Math.max(value, min), max);
 }
 
+// ---------------------------------------------------------------------
+// SVGチャート共通の描画パーツ（積立チャート・取崩チャートの両方で使用）
+// ---------------------------------------------------------------------
+
+// 背景と、グラフ本体の白いプロットエリアを描画する（svgの中身は毎回描き直すため一旦クリアする）。
+function drawChartFrame(svg, width, height, margin, plotWidth, plotHeight) {
+  svg.innerHTML = "";
+  svg.appendChild(svgEl("rect", { x: 0, y: 0, width, height, fill: "#f4f6fb", rx: 20 }));
+  svg.appendChild(
+    svgEl("rect", {
+      x: margin.left,
+      y: margin.top,
+      width: plotWidth,
+      height: plotHeight,
+      fill: "#ffffff",
+      stroke: "#dbe2ec",
+    })
+  );
+}
+
+// X軸・Y軸の枠線を描画する。
+function drawChartAxisLines(svg, width, height, margin) {
+  svg.appendChild(
+    svgEl("line", {
+      x1: margin.left,
+      y1: height - margin.bottom,
+      x2: width - margin.right,
+      y2: height - margin.bottom,
+      stroke: "#a9b7cc",
+    })
+  );
+  svg.appendChild(
+    svgEl("line", {
+      x1: margin.left,
+      y1: margin.top,
+      x2: margin.left,
+      y2: height - margin.bottom,
+      stroke: "#a9b7cc",
+    })
+  );
+}
+
+// X軸下の「◯年」ラベルを、だいたい4〜5個になる間隔で描画する。
+function drawChartYearLabels(svg, { width, height, margin, plotWidth, maxYears }) {
+  const step = Math.max(1, Math.round(maxYears / 4));
+  for (let year = 0; year <= maxYears; year += step) {
+    const x = margin.left + (year / maxYears) * plotWidth;
+    const label = svgEl("text", {
+      x,
+      y: height - margin.bottom + 24,
+      fill: "#7b8aa3",
+      "font-size": 12,
+      "text-anchor": "middle",
+    });
+    label.textContent = `${year}年`;
+    svg.appendChild(label);
+  }
+}
+
 // =====================================================================
 // DOM参照と、フェーズ間で共有する状態
 // =====================================================================
@@ -82,17 +141,30 @@ const w = {
   principal: document.getElementById("w-principal"),
   rate: document.getElementById("w-rate"),
   withdrawal: document.getElementById("w-withdrawal"),
+  fixedWithdrawal: document.getElementById("w-fixed-withdrawal"),
 
   principalValue: document.getElementById("w-principal-value"),
   rateValue: document.getElementById("w-rate-value"),
   withdrawalValue: document.getElementById("w-withdrawal-value"),
+  fixedWithdrawalValue: document.getElementById("w-fixed-withdrawal-value"),
 
   finalBalance: document.getElementById("w-final-balance"),
   withdrawalInitial: document.getElementById("w-withdrawal-initial"),
   withdrawal20y: document.getElementById("w-withdrawal-20y"),
   withdrawal40y: document.getElementById("w-withdrawal-40y"),
+  depletion: document.getElementById("w-depletion"),
   chart: document.getElementById("withdraw-chart"),
+
+  rateModeControl: document.getElementById("rate-mode-control"),
+  fixedModeControl: document.getElementById("fixed-mode-control"),
+  card20y: document.getElementById("w-card-20y"),
+  card40y: document.getElementById("w-card-40y"),
+  cardDepletion: document.getElementById("w-card-depletion"),
 };
+
+const modeRateBtn = document.getElementById("mode-rate-btn");
+const modeFixedBtn = document.getElementById("mode-fixed-btn");
+const totalWithdrawalLabel = document.getElementById("total-withdrawal-label");
 
 const linkToggle = document.getElementById("link-toggle");
 const linkedReadout = document.getElementById("linked-readout");
@@ -103,7 +175,9 @@ const copyLinkBtn = document.getElementById("copyLinkBtn");
 let latestFinalBalance = 0;
 // 連携トグルの現在値
 let isLinked = linkToggle.checked;
-// 定率取崩フェーズの「毎月の取崩額」（最終統合結果に使用する生の数値）
+// 取崩フェーズの方式: "rate"（定率取崩）| "fixed"（定額取崩）。初期値は定率。
+let withdrawalMode = "rate";
+// 取崩フェーズの「毎月の取崩額」（最終統合結果に使用する生の数値）
 let latestWithdrawalInitial = 0;
 
 // =====================================================================
@@ -140,19 +214,7 @@ function drawAccumulateChart(balances, years) {
   const maxValue = getNiceMax(Math.max(...balances, 1) * 1.1);
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((t) => maxValue * t);
 
-  a.chart.innerHTML = "";
-
-  a.chart.appendChild(svgEl("rect", { x: 0, y: 0, width, height, fill: "#f4f6fb", rx: 20 }));
-  a.chart.appendChild(
-    svgEl("rect", {
-      x: margin.left,
-      y: margin.top,
-      width: plotWidth,
-      height: plotHeight,
-      fill: "#ffffff",
-      stroke: "#dbe2ec",
-    })
-  );
+  drawChartFrame(a.chart, width, height, margin, plotWidth, plotHeight);
 
   ticks.forEach((tickValue, index) => {
     const y = margin.top + plotHeight * (1 - index / 4);
@@ -176,24 +238,7 @@ function drawAccumulateChart(balances, years) {
     a.chart.appendChild(label);
   });
 
-  a.chart.appendChild(
-    svgEl("line", {
-      x1: margin.left,
-      y1: height - margin.bottom,
-      x2: width - margin.right,
-      y2: height - margin.bottom,
-      stroke: "#a9b7cc",
-    })
-  );
-  a.chart.appendChild(
-    svgEl("line", {
-      x1: margin.left,
-      y1: margin.top,
-      x2: margin.left,
-      y2: height - margin.bottom,
-      stroke: "#a9b7cc",
-    })
-  );
+  drawChartAxisLines(a.chart, width, height, margin);
 
   const linePoints = balances.map((value, index) => {
     const x = margin.left + (index / (balances.length - 1)) * plotWidth;
@@ -215,18 +260,7 @@ function drawAccumulateChart(balances, years) {
     })
   );
 
-  for (let year = 0; year <= years; year += Math.max(1, Math.round(years / 4))) {
-    const x = margin.left + (year / years) * plotWidth;
-    const label = svgEl("text", {
-      x,
-      y: height - margin.bottom + 24,
-      fill: "#7b8aa3",
-      "font-size": 12,
-      "text-anchor": "middle",
-    });
-    label.textContent = `${year}年`;
-    a.chart.appendChild(label);
-  }
+  drawChartYearLabels(a.chart, { width, height, margin, plotWidth, maxYears: years });
 }
 
 function renderAccumulate() {
@@ -263,29 +297,59 @@ function renderAccumulate() {
 });
 
 // =====================================================================
-// Stage 2: 定率取崩シミュレーション
+// Stage 2: 取崩シミュレーション（定率取崩 / 定額取崩）
 // =====================================================================
 
-function buildWithdrawalSeries(principal, annualRate, withdrawalRate) {
+// 定率取崩・定額取崩に共通する40年間の月次シミュレーション。
+// getWithdrawal は毎月の希望取崩額を返すコールバックで、方式ごとの違いを吸収する。
+// 実際の取崩額は「その月の運用後残高」を上限にクランプされる（残高以上は取り崩せない）。
+function simulateWithdrawal({ principal, annualRate, months, getWithdrawal }) {
   const monthlyRate = annualRate / 100 / 12;
-  const months = 40 * 12;
   const points = [{ x: 0, y: principal }];
   const bars = [];
   let balance = principal;
+  let depletionMonth = null;
 
   for (let month = 1; month <= months; month += 1) {
-    const withdrawal = (balance * (withdrawalRate / 100)) / 12;
-    balance = balance + balance * monthlyRate - withdrawal;
-    bars.push(withdrawal);
+    const preGrowthBalance = balance;
+    const grownBalance = balance * (1 + monthlyRate);
+    const requestedWithdrawal = getWithdrawal({ preGrowthBalance, grownBalance, month });
+    const actualWithdrawal = Math.max(0, Math.min(requestedWithdrawal, grownBalance));
+
+    balance = grownBalance - actualWithdrawal;
+    bars.push(actualWithdrawal);
 
     if (balance <= 0) {
       balance = 0;
+      if (depletionMonth === null && actualWithdrawal > 0) {
+        depletionMonth = month;
+      }
     }
 
     points.push({ x: month / 12, y: balance });
   }
 
-  return { points, bars };
+  return { points, bars, depletionMonth };
+}
+
+function buildWithdrawalSeries(principal, annualRate, withdrawalRate) {
+  return simulateWithdrawal({
+    principal,
+    annualRate,
+    months: 40 * 12,
+    // 取崩率方式: 毎月、運用前の残高に対して一定割合を取り崩す。
+    getWithdrawal: ({ preGrowthBalance }) => (preGrowthBalance * (withdrawalRate / 100)) / 12,
+  });
+}
+
+function buildFixedWithdrawalSeries(principal, annualRate, monthlyWithdrawal) {
+  return simulateWithdrawal({
+    principal,
+    annualRate,
+    months: 40 * 12,
+    // 定額方式: 毎月、残高に関わらず一定額を取り崩そうとする。
+    getWithdrawal: () => monthlyWithdrawal,
+  });
 }
 
 function drawWithdrawChart(series) {
@@ -301,19 +365,7 @@ function drawWithdrawChart(series) {
   const leftTicks = [0, 0.25, 0.5, 0.75, 1].map((t) => maxLeft * t);
   const rightTicks = [0, 0.25, 0.5, 0.75, 1].map((t) => maxRight * t);
 
-  w.chart.innerHTML = "";
-
-  w.chart.appendChild(svgEl("rect", { x: 0, y: 0, width, height, fill: "#f4f6fb", rx: 20 }));
-  w.chart.appendChild(
-    svgEl("rect", {
-      x: margin.left,
-      y: margin.top,
-      width: plotWidth,
-      height: plotHeight,
-      fill: "#ffffff",
-      stroke: "#dbe2ec",
-    })
-  );
+  drawChartFrame(w.chart, width, height, margin, plotWidth, plotHeight);
 
   leftTicks.forEach((tickValue, index) => {
     const y = margin.top + plotHeight * (1 - index / 4);
@@ -350,24 +402,7 @@ function drawWithdrawChart(series) {
     w.chart.appendChild(label);
   });
 
-  w.chart.appendChild(
-    svgEl("line", {
-      x1: margin.left,
-      y1: height - margin.bottom,
-      x2: width - margin.right,
-      y2: height - margin.bottom,
-      stroke: "#a9b7cc",
-    })
-  );
-  w.chart.appendChild(
-    svgEl("line", {
-      x1: margin.left,
-      y1: margin.top,
-      x2: margin.left,
-      y2: height - margin.bottom,
-      stroke: "#a9b7cc",
-    })
-  );
+  drawChartAxisLines(w.chart, width, height, margin);
 
   const baselineY = margin.top + plotHeight;
   const balancePoints = series.points.map((point) => {
@@ -416,18 +451,7 @@ function drawWithdrawChart(series) {
     })
   );
 
-  for (let year = 0; year <= 40; year += 10) {
-    const x = margin.left + (year / 40) * plotWidth;
-    const label = svgEl("text", {
-      x,
-      y: height - margin.bottom + 24,
-      fill: "#7b8aa3",
-      "font-size": 12,
-      "text-anchor": "middle",
-    });
-    label.textContent = `${year}年`;
-    w.chart.appendChild(label);
-  }
+  drawChartYearLabels(w.chart, { width, height, margin, plotWidth, maxYears: 40 });
 
   const legend = svgEl("g", {});
   const lineLegend = svgEl("line", {
@@ -475,20 +499,40 @@ function drawWithdrawChart(series) {
 function renderWithdraw() {
   const principal = isLinked ? latestFinalBalance : Number(w.principal.value);
   const annualRate = Number(w.rate.value);
-  const withdrawalRate = Number(w.withdrawal.value);
 
   w.principalValue.value = formatCurrency(principal);
   w.rateValue.value = formatPercent(annualRate);
-  w.withdrawalValue.value = formatPercent(withdrawalRate);
 
-  const { points, bars } = buildWithdrawalSeries(principal, annualRate, withdrawalRate);
+  let result;
+  if (withdrawalMode === "fixed") {
+    const monthlyWithdrawal = Number(w.fixedWithdrawal.value);
+    w.fixedWithdrawalValue.value = formatCurrency(monthlyWithdrawal);
+    result = buildFixedWithdrawalSeries(principal, annualRate, monthlyWithdrawal);
+  } else {
+    const withdrawalRate = Number(w.withdrawal.value);
+    w.withdrawalValue.value = formatPercent(withdrawalRate);
+    result = buildWithdrawalSeries(principal, annualRate, withdrawalRate);
+  }
+
+  const { points, bars, depletionMonth } = result;
   const finalBalance = points[points.length - 1].y;
   w.finalBalance.textContent = formatCurrency(finalBalance);
 
   latestWithdrawalInitial = bars[0] ?? 0;
   w.withdrawalInitial.textContent = formatCurrency(latestWithdrawalInitial);
-  w.withdrawal20y.textContent = formatCurrency(bars[20 * 12 - 1] ?? 0);
-  w.withdrawal40y.textContent = formatCurrency(bars[bars.length - 1] ?? 0);
+
+  if (withdrawalMode === "fixed") {
+    if (depletionMonth == null) {
+      w.depletion.textContent = "40年以内に枯渇なし";
+    } else {
+      const years = Math.floor(depletionMonth / 12);
+      const months = depletionMonth % 12;
+      w.depletion.textContent = `${years}年${months}か月`;
+    }
+  } else {
+    w.withdrawal20y.textContent = formatCurrency(bars[20 * 12 - 1] ?? 0);
+    w.withdrawal40y.textContent = formatCurrency(bars[bars.length - 1] ?? 0);
+  }
 
   drawWithdrawChart({ points, bars });
 
@@ -496,7 +540,7 @@ function renderWithdraw() {
   syncShareUrl();
 }
 
-[w.rate, w.withdrawal].forEach((input) => {
+[w.rate, w.withdrawal, w.fixedWithdrawal].forEach((input) => {
   input.addEventListener("input", renderWithdraw);
 });
 
@@ -505,6 +549,33 @@ w.principal.addEventListener("input", () => {
     renderWithdraw();
   }
 });
+
+// =====================================================================
+// 取崩フェーズ: 定率取崩 / 定額取崩の切り替え
+// =====================================================================
+
+function setWithdrawalMode(mode) {
+  withdrawalMode = mode;
+
+  modeRateBtn.classList.toggle("active", mode === "rate");
+  modeRateBtn.setAttribute("aria-pressed", String(mode === "rate"));
+  modeFixedBtn.classList.toggle("active", mode === "fixed");
+  modeFixedBtn.setAttribute("aria-pressed", String(mode === "fixed"));
+
+  w.rateModeControl.classList.toggle("hidden", mode !== "rate");
+  w.fixedModeControl.classList.toggle("hidden", mode !== "fixed");
+
+  w.card20y.classList.toggle("hidden", mode !== "rate");
+  w.card40y.classList.toggle("hidden", mode !== "rate");
+  w.cardDepletion.classList.toggle("hidden", mode !== "fixed");
+
+  totalWithdrawalLabel.textContent = mode === "rate" ? "毎月の取崩額（定率取崩）" : "毎月の取崩額（定額取崩）";
+
+  renderWithdraw();
+}
+
+modeRateBtn.addEventListener("click", () => setWithdrawalMode("rate"));
+modeFixedBtn.addEventListener("click", () => setWithdrawalMode("fixed"));
 
 // =====================================================================
 // フェーズ間の連携ロジック: 積立の最終残高 → 取崩の元本
@@ -800,7 +871,7 @@ function handlePensionInputChange(event) {
 });
 
 // =====================================================================
-// Stage 4: 統合結果（定率取崩の毎月の取崩額 + 年金月額②）
+// Stage 4: 統合結果（取崩フェーズの毎月の取崩額 + 年金月額②）
 // =====================================================================
 
 const totalWithdrawalEl = document.getElementById("total-withdrawal");
@@ -821,23 +892,34 @@ function renderTotal() {
 // 共有リンク: 現在の設定をURLクエリパラメータに保存し、コピーする
 // =====================================================================
 
+// URLに保存する「レンジスライダー」の入力欄の一覧。
+// 新しいスライダーを共有リンク対応にしたいときは、ここに1行足すだけでよい
+// （parse / apply / sync すべてにこの一覧が使われるため、更新漏れが起きない）。
+const shareSliderFields = [
+  { param: "principal", input: a.principal },
+  { param: "monthly", input: a.monthly },
+  { param: "rate", input: a.rate },
+  { param: "years", input: a.years },
+  { param: "wprincipal", input: w.principal },
+  { param: "wrate", input: w.rate },
+  { param: "wwithdrawal", input: w.withdrawal },
+  { param: "wfixedwithdrawal", input: w.fixedWithdrawal },
+];
+
 function parseQueryState() {
   const params = new URLSearchParams(window.location.search);
   if ([...params.keys()].length === 0) {
     return null;
   }
 
-  const readParam = (key, input) =>
-    clamp(Number(params.get(key) ?? input.value), Number(input.min), Number(input.max));
+  const sliderValues = {};
+  shareSliderFields.forEach(({ param, input }) => {
+    sliderValues[param] = clamp(Number(params.get(param) ?? input.value), Number(input.min), Number(input.max));
+  });
 
   return {
-    principal: readParam("principal", a.principal),
-    monthly: readParam("monthly", a.monthly),
-    rate: readParam("rate", a.rate),
-    years: readParam("years", a.years),
-    wPrincipal: readParam("wprincipal", w.principal),
-    wRate: readParam("wrate", w.rate),
-    wWithdrawal: readParam("wwithdrawal", w.withdrawal),
+    sliderValues,
+    wMode: params.get("wmode") === "fixed" ? "fixed" : "rate",
     linked: params.has("linked") ? params.get("linked") !== "0" : isLinked,
     pension: {
       avgIncome: clamp(Number(params.get("avgIncome") ?? pensionDefaults.avgIncome), 0, 20000000),
@@ -855,13 +937,10 @@ function applyParsedState(parsed) {
     return;
   }
 
-  a.principal.value = parsed.principal;
-  a.monthly.value = parsed.monthly;
-  a.rate.value = parsed.rate;
-  a.years.value = parsed.years;
-  w.principal.value = parsed.wPrincipal;
-  w.rate.value = parsed.wRate;
-  w.withdrawal.value = parsed.wWithdrawal;
+  shareSliderFields.forEach(({ param, input }) => {
+    input.value = parsed.sliderValues[param];
+  });
+  withdrawalMode = parsed.wMode;
   linkToggle.checked = parsed.linked;
   isLinked = parsed.linked;
 
@@ -869,22 +948,19 @@ function applyParsedState(parsed) {
 }
 
 function syncShareUrl() {
-  const params = new URLSearchParams({
-    principal: a.principal.value,
-    monthly: a.monthly.value,
-    rate: a.rate.value,
-    years: a.years.value,
-    wprincipal: w.principal.value,
-    wrate: w.rate.value,
-    wwithdrawal: w.withdrawal.value,
-    linked: isLinked ? "1" : "0",
-    avgIncome: pensionState.avgIncome,
-    yearsNational: pensionState.yearsNational,
-    yearsKosei: pensionState.yearsKosei,
-    startAge1: pensionState.startAge1,
-    startAge2: pensionState.startAge2,
-    returnRate: pensionState.returnRate,
+  const params = new URLSearchParams();
+  shareSliderFields.forEach(({ param, input }) => {
+    params.set(param, input.value);
   });
+  params.set("wmode", withdrawalMode);
+  params.set("linked", isLinked ? "1" : "0");
+  params.set("avgIncome", pensionState.avgIncome);
+  params.set("yearsNational", pensionState.yearsNational);
+  params.set("yearsKosei", pensionState.yearsKosei);
+  params.set("startAge1", pensionState.startAge1);
+  params.set("startAge2", pensionState.startAge2);
+  params.set("returnRate", pensionState.returnRate);
+
   const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
   window.history.replaceState(null, "", url);
 }
@@ -913,12 +989,13 @@ copyLinkBtn.addEventListener("click", copyLink);
 // URLにクエリパラメータがあれば、それを初期状態として各入力に反映する。
 applyParsedState(parseQueryState());
 
-// 連携の初期表示（disabled属性・注記の表示）を先に整えてから、
-// 積立側の初回計算を行う。renderAccumulate は連携中なら取崩側の
-// 計算・描画も内部で行うので、連携OFFで始まる場合だけここで補う
-// （どちらの場合も renderWithdraw は1回しか呼ばれない）。
+// 連携の初期表示（disabled属性・注記の表示）と、取崩方式（定率/定額）の
+// 初期表示を先に整えてから、積立側の初回計算を行う。renderAccumulate は
+// 連携中なら取崩側の計算・描画も内部で行うので、連携OFFで始まる場合だけ
+// ここで補う。
 w.principal.disabled = isLinked;
 linkedReadout.classList.toggle("active", isLinked);
+setWithdrawalMode(withdrawalMode);
 renderAccumulate();
 if (!isLinked) {
   renderWithdraw();

@@ -12,7 +12,7 @@
         <p class="eyebrow">Simulation</p>
         <h1>資産形成・老後資金シミュレーション</h1>
         <p class="lead">
-          積立投資 → 定率取崩 → 年金受給の3つのシミュレーションをひとつにつなげ、老後に毎月いくら使えるのかまで確認できます。
+          積立投資 → 定率/定額取崩 → 年金受給の3つのシミュレーションをひとつにつなげ、老後に毎月いくら使えるのかまで確認できます。
         </p>
       </header>
 
@@ -96,17 +96,28 @@
         </div>
       </div>
 
-      <!-- ============== Stage 2: 定率取崩 ============== -->
+      <!-- ============== Stage 2: 取崩 ============== -->
       <section class="stage" id="stage-withdraw">
         <div class="stage-label">
           <span class="stage-index">2</span>
-          <span class="stage-title">定率取崩フェーズ</span>
+          <span class="stage-title">取崩フェーズ</span>
         </div>
 
         <div class="app-shell">
           <section class="panel controls-panel">
-            <h2 class="panel-title">定率取崩シミュレーション</h2>
-            <p class="subtitle">一定の割合で取り崩す場合の、毎月の取崩額と資産推移を確認できます。</p>
+            <h2 class="panel-title">取崩シミュレーション</h2>
+            <p class="subtitle">
+              「定率取崩」と「定額取崩」のどちらで資産を取り崩すか選んで、毎月の取崩額と資産推移を確認できます。
+            </p>
+
+            <div class="mode-toggle" role="group" aria-label="取崩方法の選択">
+              <button type="button" class="mode-btn active" id="mode-rate-btn" aria-pressed="true">
+                定率取崩
+              </button>
+              <button type="button" class="mode-btn" id="mode-fixed-btn" aria-pressed="false">
+                定額取崩
+              </button>
+            </div>
 
             <label class="control">
               <div class="control-head">
@@ -128,13 +139,32 @@
               <input type="range" id="w-rate" min="0" max="20" step="0.1" value="5" />
             </label>
 
-            <label class="control">
-              <div class="control-head">
-                <span>取崩率</span>
-                <output id="w-withdrawal-value"></output>
-              </div>
-              <input type="range" id="w-withdrawal" min="0" max="20" step="0.1" value="4" />
-            </label>
+            <div id="rate-mode-control" class="mode-control">
+              <label class="control">
+                <div class="control-head">
+                  <span>取崩率</span>
+                  <output id="w-withdrawal-value"></output>
+                </div>
+                <input type="range" id="w-withdrawal" min="0" max="20" step="0.1" value="4" />
+              </label>
+            </div>
+
+            <div id="fixed-mode-control" class="mode-control hidden">
+              <label class="control">
+                <div class="control-head">
+                  <span>毎月の取崩額</span>
+                  <output id="w-fixed-withdrawal-value"></output>
+                </div>
+                <input
+                  type="range"
+                  id="w-fixed-withdrawal"
+                  min="0"
+                  max="5000000"
+                  step="10000"
+                  value="200000"
+                />
+              </label>
+            </div>
           </section>
 
           <section class="panel chart-panel">
@@ -143,20 +173,24 @@
                 <h2>毎月の取崩額</h2>
                 <p id="w-withdrawal-initial">-</p>
               </article>
-              <article class="summary-card">
+              <article class="summary-card" id="w-card-20y">
                 <h2>20年後の取崩額</h2>
                 <p id="w-withdrawal-20y">-</p>
               </article>
-              <article class="summary-card">
+              <article class="summary-card" id="w-card-40y">
                 <h2>40年後の取崩額</h2>
                 <p id="w-withdrawal-40y">-</p>
+              </article>
+              <article class="summary-card hidden" id="w-card-depletion">
+                <h2>資産が尽きる時期</h2>
+                <p id="w-depletion">-</p>
               </article>
               <article class="summary-card">
                 <h2>最終残高</h2>
                 <p id="w-final-balance">-</p>
               </article>
             </div>
-            <svg id="withdraw-chart" viewBox="0 0 760 420" role="img" aria-label="定率取り崩しシミュレーションのグラフ"></svg>
+            <svg id="withdraw-chart" viewBox="0 0 760 420" role="img" aria-label="取り崩しシミュレーションのグラフ"></svg>
           </section>
         </div>
       </section>
@@ -257,12 +291,12 @@
         <section class="panel total-panel">
           <h2 class="panel-title">老後、毎月いくら使える？</h2>
           <p class="subtitle">
-            定率取崩シミュレーションの「毎月の取崩額」と、年金受給シミュレーションの「開始年齢②」の月額受給額を合計した金額です。
+            取崩シミュレーションの「毎月の取崩額」と、年金受給シミュレーションの「開始年齢②」の月額受給額を合計した金額です。
           </p>
 
           <div class="total-breakdown">
             <div class="total-item">
-              <span class="total-item-label">毎月の取崩額（定率取崩）</span>
+              <span class="total-item-label" id="total-withdrawal-label">毎月の取崩額（定率取崩）</span>
               <span class="total-item-value" id="total-withdrawal">-</span>
             </div>
             <div class="total-op">＋</div>
