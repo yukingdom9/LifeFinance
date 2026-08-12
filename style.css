@@ -1,0 +1,578 @@
+:root {
+  color-scheme: light;
+  font-family: "Segoe UI", "Hiragino Sans", "Yu Gothic UI", sans-serif;
+  background: #eef1f6;
+  color: #1f2d3d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #eef1f6 0%, #e4e9f2 100%);
+  padding: 24px;
+}
+
+.page {
+  width: min(1240px, 100%);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* ---------- Hero ---------- */
+
+.hero {
+  text-align: center;
+  padding: 12px 16px 4px;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  font-size: 0.78rem;
+  color: #7b8aa3;
+  font-weight: 700;
+}
+
+.hero h1 {
+  margin: 0 0 10px;
+  font-size: 1.9rem;
+  color: #1f2d3d;
+}
+
+.hero .lead {
+  margin: 0 auto;
+  max-width: 720px;
+  color: #5b6b82;
+  line-height: 1.7;
+}
+
+/* ---------- Stage (each simulator block) ---------- */
+
+.stage {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stage-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  color: #336485;
+}
+
+.stage-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: #336485;
+  color: #ffffff;
+  font-size: 0.85rem;
+}
+
+.stage-title {
+  font-size: 1.05rem;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) 1fr;
+  gap: 24px;
+  align-items: stretch;
+}
+
+.panel {
+  background: #ffffff;
+  border: 1px solid #dbe2ec;
+  box-shadow: 0 20px 50px rgba(31, 45, 61, 0.08);
+  border-radius: 24px;
+  padding: 24px;
+}
+
+.panel-title {
+  margin: 0 0 6px;
+  font-size: 1.2rem;
+  color: #1f2d3d;
+}
+
+h2 {
+  margin: 0;
+}
+
+.subtitle {
+  margin: 0 0 24px;
+  color: #5b6b82;
+  line-height: 1.6;
+}
+
+.control {
+  display: block;
+  margin-bottom: 18px;
+}
+
+.control-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #1f2d3d;
+}
+
+output {
+  color: #336485;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: #4e79a7;
+  cursor: pointer;
+}
+
+input[type="range"]:disabled {
+  accent-color: #b7c2d4;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* ---------- Summary / result cards ---------- */
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.summary-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.summary-grid-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.summary-card {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #f4f6fb;
+  border: 1px solid #dbe2ec;
+}
+
+.summary-card h2 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  color: #5b6b82;
+}
+
+.summary-card p {
+  margin: 4px 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: #1f2d3d;
+}
+
+.summary-card p strong {
+  color: #1f2d3d;
+}
+
+.summary-card p span {
+  font-weight: 700;
+  color: #336485;
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-card p span.amount {
+  color: #1f4258;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.summary-card p span.amount-b {
+  color: #92400e;
+}
+
+.summary-grid-3 .summary-card p,
+.summary-grid-4 .summary-card p {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1f2d3d;
+}
+
+.highlight-card {
+  background: #eaf0fb;
+  border-color: #cddaf4;
+}
+
+.chart-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+}
+
+svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+#accumulate-chart {
+  aspect-ratio: 760 / 420;
+}
+
+#withdraw-chart {
+  aspect-ratio: 760 / 420;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 18px;
+  background: #f4f6fb;
+  box-shadow: inset 0 0 0 1px #dbe2ec;
+}
+
+/* ---------- Legend (pension chart) ---------- */
+
+.legend-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  margin-top: 14px;
+  color: #5b6b82;
+  font-size: 0.85rem;
+}
+
+.legend-item {
+  width: 16px;
+  height: 8px;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 8px;
+  border-radius: 4px;
+}
+
+.legend-a {
+  background: #336485;
+}
+
+.legend-b {
+  background: #d97706;
+}
+
+/* ---------- Link connector between accumulate / withdraw ---------- */
+
+.connector {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0;
+}
+
+.connector-card {
+  width: min(560px, 100%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #ffffff;
+  border: 1px solid #dbe2ec;
+  border-radius: 18px;
+  padding: 14px 20px;
+  box-shadow: 0 12px 30px rgba(31, 45, 61, 0.06);
+}
+
+.connector-icon {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: #eaf0fb;
+  color: #336485;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.connector-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.connector-title {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: #1f2d3d;
+}
+
+.connector-detail {
+  margin: 2px 0 0;
+  font-size: 0.82rem;
+  color: #5b6b82;
+}
+
+.connector-detail strong {
+  color: #336485;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Toggle switch */
+
+.switch {
+  flex: none;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch-track {
+  width: 44px;
+  height: 24px;
+  background: #d5dce6;
+  border-radius: 999px;
+  position: relative;
+  transition: background 0.2s ease;
+  display: inline-block;
+}
+
+.switch-track::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease;
+}
+
+.switch input:checked + .switch-track {
+  background: #336485;
+}
+
+.switch input:checked + .switch-track::before {
+  transform: translateX(20px);
+}
+
+.switch input:focus-visible + .switch-track {
+  outline: 2px solid #336485;
+  outline-offset: 2px;
+}
+
+/* Linked-principal readout inside stage 2 */
+
+.linked-readout {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin: -8px 0 14px;
+  padding: 10px 12px;
+  background: #eaf0fb;
+  border: 1px solid #d5e0f3;
+  border-radius: 12px;
+  font-size: 0.82rem;
+  color: #336485;
+}
+
+.linked-readout.active {
+  display: flex;
+}
+
+/* ---------- Stage 4: total result ---------- */
+
+.total-panel {
+  background: linear-gradient(135deg, #1f3557 0%, #336485 100%);
+  border: none;
+  color: #ffffff;
+}
+
+.total-panel .panel-title {
+  color: #ffffff;
+}
+
+.total-panel .subtitle {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.total-breakdown {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.total-item {
+  flex: 1;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.total-item-label {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.total-item-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.total-op {
+  align-self: center;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 0 4px;
+}
+
+.total-result {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 22px 24px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.total-result-label {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.total-result-value {
+  font-size: 2.4rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Share link ---------- */
+
+.share-row {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0;
+}
+
+.share-card {
+  width: min(560px, 100%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #ffffff;
+  border: 1px solid #dbe2ec;
+  border-radius: 18px;
+  padding: 14px 20px;
+  box-shadow: 0 12px 30px rgba(31, 45, 61, 0.06);
+}
+
+.share-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.share-title {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: #1f2d3d;
+  margin: 0;
+}
+
+.share-detail {
+  margin: 2px 0 0;
+  font-size: 0.82rem;
+  color: #5b6b82;
+}
+
+.share-btn {
+  flex: none;
+  border: none;
+  background: #336485;
+  color: #ffffff;
+  padding: 12px 18px;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.share-btn:hover {
+  background: #1b3557;
+}
+
+/* ---------- Responsive breakpoints ----------
+   ここより上のルールをすべて上書きできるよう、レスポンシブ対応は
+   スタイルシートの最後にまとめている。 */
+
+@media (max-width: 900px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+    align-items: normal;
+  }
+}
+
+@media (max-width: 640px) {
+  .connector-card {
+    flex-wrap: wrap;
+  }
+
+  .share-card {
+    flex-wrap: wrap;
+  }
+
+  .summary-grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .total-result {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 520px) {
+  .summary-grid-3,
+  .summary-grid-4 {
+    grid-template-columns: 1fr;
+  }
+}

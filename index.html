@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>資産形成・老後資金シミュレーション</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <p class="eyebrow">Simulation</p>
+        <h1>資産形成・老後資金シミュレーション</h1>
+        <p class="lead">
+          積立投資 → 定率取崩 → 年金受給の3つのシミュレーションをひとつにつなげ、老後に毎月いくら使えるのかまで確認できます。
+        </p>
+      </header>
+
+      <!-- ============== Stage 1: 積立投資 ============== -->
+      <section class="stage" id="stage-accumulate">
+        <div class="stage-label">
+          <span class="stage-index">1</span>
+          <span class="stage-title">積立投資フェーズ</span>
+        </div>
+
+        <div class="app-shell">
+          <section class="panel controls-panel">
+            <h2 class="panel-title">積立投資シミュレーション</h2>
+            <p class="subtitle">元本・積立額・年利率・運用期間を動かすと、将来の資産推移が自動で更新されます。</p>
+
+            <label class="control">
+              <div class="control-head">
+                <span>元本</span>
+                <output id="a-principal-value"></output>
+              </div>
+              <input id="a-principal" type="range" min="0" max="100000000" step="10000" value="1000000" />
+            </label>
+
+            <label class="control">
+              <div class="control-head">
+                <span>積立（月額）</span>
+                <output id="a-monthly-value"></output>
+              </div>
+              <input id="a-monthly" type="range" min="0" max="500000" step="1000" value="100000" />
+            </label>
+
+            <label class="control">
+              <div class="control-head">
+                <span>年利率</span>
+                <output id="a-rate-value"></output>
+              </div>
+              <input id="a-rate" type="range" min="0" max="20" step="0.1" value="5" />
+            </label>
+
+            <label class="control">
+              <div class="control-head">
+                <span>運用期間</span>
+                <output id="a-years-value"></output>
+              </div>
+              <input id="a-years" type="range" min="1" max="40" step="1" value="20" />
+            </label>
+          </section>
+
+          <section class="panel chart-panel">
+            <div class="summary-grid summary-grid-3">
+              <article class="summary-card">
+                <h2>最終残高</h2>
+                <p id="a-final-balance">-</p>
+              </article>
+              <article class="summary-card">
+                <h2>総投資額</h2>
+                <p id="a-total-contribution">-</p>
+              </article>
+              <article class="summary-card">
+                <h2>運用益</h2>
+                <p id="a-profit">-</p>
+              </article>
+            </div>
+            <svg id="accumulate-chart" viewBox="0 0 760 420" role="img" aria-label="積立投資の資産推移グラフ"></svg>
+          </section>
+        </div>
+      </section>
+
+      <!-- ============== Connector ============== -->
+      <div class="connector">
+        <div class="connector-card">
+          <span class="connector-icon">⇣</span>
+          <div class="connector-text">
+            <p class="connector-title">積立の最終残高を、取崩シミュレーションの元本として使う</p>
+            <p class="connector-detail">現在の最終残高: <strong id="connector-final-balance">-</strong></p>
+          </div>
+          <label class="switch" title="連携のON/OFFを切り替え">
+            <input type="checkbox" id="link-toggle" checked />
+            <span class="switch-track"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- ============== Stage 2: 定率取崩 ============== -->
+      <section class="stage" id="stage-withdraw">
+        <div class="stage-label">
+          <span class="stage-index">2</span>
+          <span class="stage-title">定率取崩フェーズ</span>
+        </div>
+
+        <div class="app-shell">
+          <section class="panel controls-panel">
+            <h2 class="panel-title">定率取崩シミュレーション</h2>
+            <p class="subtitle">一定の割合で取り崩す場合の、毎月の取崩額と資産推移を確認できます。</p>
+
+            <label class="control">
+              <div class="control-head">
+                <span>元本</span>
+                <output id="w-principal-value"></output>
+              </div>
+              <input type="range" id="w-principal" min="1000000" max="1000000000" step="1000000" value="50000000" />
+            </label>
+
+            <p class="linked-readout" id="linked-readout">
+              🔗 積立投資シミュレーションの最終残高と連携中です。手動で調整するには上のトグルをOFFにしてください。
+            </p>
+
+            <label class="control">
+              <div class="control-head">
+                <span>年利率</span>
+                <output id="w-rate-value"></output>
+              </div>
+              <input type="range" id="w-rate" min="0" max="20" step="0.1" value="5" />
+            </label>
+
+            <label class="control">
+              <div class="control-head">
+                <span>取崩率</span>
+                <output id="w-withdrawal-value"></output>
+              </div>
+              <input type="range" id="w-withdrawal" min="0" max="20" step="0.1" value="4" />
+            </label>
+          </section>
+
+          <section class="panel chart-panel">
+            <div class="summary-grid summary-grid-4">
+              <article class="summary-card highlight-card">
+                <h2>毎月の取崩額</h2>
+                <p id="w-withdrawal-initial">-</p>
+              </article>
+              <article class="summary-card">
+                <h2>20年後の取崩額</h2>
+                <p id="w-withdrawal-20y">-</p>
+              </article>
+              <article class="summary-card">
+                <h2>40年後の取崩額</h2>
+                <p id="w-withdrawal-40y">-</p>
+              </article>
+              <article class="summary-card">
+                <h2>最終残高</h2>
+                <p id="w-final-balance">-</p>
+              </article>
+            </div>
+            <svg id="withdraw-chart" viewBox="0 0 760 420" role="img" aria-label="定率取り崩しシミュレーションのグラフ"></svg>
+          </section>
+        </div>
+      </section>
+
+      <!-- ============== Stage 3: 年金受給 ============== -->
+      <section class="stage" id="stage-pension">
+        <div class="stage-label">
+          <span class="stage-index">3</span>
+          <span class="stage-title">年金受給フェーズ</span>
+        </div>
+
+        <div class="app-shell">
+          <section class="panel controls-panel">
+            <h2 class="panel-title">年金受給シミュレーション</h2>
+            <p class="subtitle">
+              平均年収・加入年数・受給開始年齢・運用利回りを動かすと、月額受給額と損益分岐点が自動で更新されます。
+            </p>
+
+            <label class="control">
+              <div class="control-head">
+                <span>平均年収</span>
+                <output><span id="p-avgIncomeValue"></span>円</output>
+              </div>
+              <input id="p-avgIncome" type="range" min="0" max="20000000" step="100000" />
+            </label>
+
+            <label class="control">
+              <div class="control-head">
+                <span>国民年金加入年数</span>
+                <output><span id="p-yearsNationalValue"></span>年</output>
+              </div>
+              <input id="p-yearsNational" type="range" min="0" max="40" step="1" />
+            </label>
+
+            <label class="control">
+              <div class="control-head">
+                <span>厚生年金加入年数</span>
+                <output><span id="p-yearsKoseiValue"></span>年</output>
+              </div>
+              <input id="p-yearsKosei" type="range" min="0" max="50" step="1" />
+            </label>
+
+            <label class="control">
+              <div class="control-head">
+                <span>年金受給開始年齢①</span>
+                <output><span id="p-startAge1Value"></span>歳</output>
+              </div>
+              <input id="p-startAge1" type="range" min="60" max="75" step="1" />
+            </label>
+
+            <label class="control">
+              <div class="control-head">
+                <span>年金受給開始年齢②</span>
+                <output><span id="p-startAge2Value"></span>歳</output>
+              </div>
+              <input id="p-startAge2" type="range" min="60" max="75" step="1" />
+            </label>
+
+            <label class="control">
+              <div class="control-head">
+                <span>運用利回り</span>
+                <output><span id="p-returnRateValue"></span>%</output>
+              </div>
+              <input id="p-returnRate" type="range" min="0" max="20" step="0.1" />
+            </label>
+          </section>
+
+          <section class="panel chart-panel">
+            <div class="summary-grid">
+              <article class="summary-card">
+                <h2>月額受給額</h2>
+                <p>開始年齢① <strong id="p-monthly1Age"></strong>：<span id="p-monthly1" class="amount"></span>円</p>
+                <p>開始年齢② <strong id="p-monthly2Age"></strong>：<span id="p-monthly2" class="amount amount-b"></span>円</p>
+              </article>
+              <article class="summary-card">
+                <h2>損益分岐点</h2>
+                <p id="p-breakevenText"></p>
+                <p id="p-investmentText"></p>
+              </article>
+            </div>
+
+            <canvas id="p-chartCanvas" width="840" height="440"></canvas>
+            <div class="legend-row">
+              <span class="legend-item legend-a"></span> 年齢①ライン
+              <span class="legend-item legend-b"></span> 年齢②ライン
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <!-- ============== Stage 4: 最終結果（統合） ============== -->
+      <section class="stage" id="stage-total">
+        <div class="stage-label">
+          <span class="stage-index">4</span>
+          <span class="stage-title">統合結果</span>
+        </div>
+
+        <section class="panel total-panel">
+          <h2 class="panel-title">老後、毎月いくら使える？</h2>
+          <p class="subtitle">
+            定率取崩シミュレーションの「毎月の取崩額」と、年金受給シミュレーションの「開始年齢②」の月額受給額を合計した金額です。
+          </p>
+
+          <div class="total-breakdown">
+            <div class="total-item">
+              <span class="total-item-label">毎月の取崩額（定率取崩）</span>
+              <span class="total-item-value" id="total-withdrawal">-</span>
+            </div>
+            <div class="total-op">＋</div>
+            <div class="total-item">
+              <span class="total-item-label">年金月額（開始年齢② <span id="total-pension-age">-</span>歳）</span>
+              <span class="total-item-value" id="total-pension">-</span>
+            </div>
+          </div>
+
+          <div class="total-result">
+            <span class="total-result-label">老後、毎月使えるお金</span>
+            <span class="total-result-value" id="total-result">-</span>
+          </div>
+        </section>
+      </section>
+
+      <div class="share-row">
+        <div class="share-card">
+          <div class="share-text">
+            <p class="share-title">現在の設定を共有</p>
+            <p class="share-detail">今の入力内容をURLに保存して、リンクとしてコピーできます。</p>
+          </div>
+          <button id="copyLinkBtn" type="button" class="share-btn">共有リンクをコピー</button>
+        </div>
+      </div>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
