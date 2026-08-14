@@ -372,9 +372,9 @@ function buildFixedWithdrawalSeries(principal, annualRate, monthlyWithdrawal, in
 }
 
 // 動的取崩（定額＋定率のハイブリッド）: 生活費の不足分など「必ず確保したい額」を
-// 定額（固定）で取り崩しつつ、それとは別に残高に応じた「ゆとり分」を取崩率（余剰）で
+// 年金補充額（定額）で取り崩しつつ、それとは別に残高に応じた「ゆとり分」を取崩率（余剰）で
 // 取り崩す。両者は独立したスライダーで指定し、毎月その合計額を取り崩す。
-// 定額（固定）部分は、インフレ率に応じて毎年増えていく（余剰の取崩率には影響しない）。
+// 年金補充額部分は、インフレ率に応じて毎年増えていく（余剰の取崩率には影響しない）。
 function buildDynamicWithdrawalSeries(principal, annualRate, fixedWithdrawal, inflationRate, surplusRate) {
   return simulateWithdrawal({
     principal,
@@ -405,8 +405,8 @@ const withdrawalModeConfigs = {
     button: modeFixedBtn,
     control: w.fixedModeControl,
     totalLabel: "毎月の取崩額（定額取崩）",
-    showTrendCards: false,
-    showDepletionCard: true, // 定額分があるため理論上資産が尽きうる
+    showTrendCards: true, // 定率取崩と同じ4項目（毎月/20年後/40年後/最終残高）で表示を揃える
+    showDepletionCard: false,
     compute(principal, annualRate) {
       const monthlyWithdrawal = Number(w.fixedWithdrawal.value);
       const inflationRate = Number(w.fixedInflation.value);
@@ -419,10 +419,9 @@ const withdrawalModeConfigs = {
     button: modeDynamicBtn,
     control: w.dynamicModeControl,
     totalLabel: "毎月の取崩額（動的取崩）",
-    // 動的取崩は「取崩額の推移」（定率取崩と同じ）と「枯渇時期」（定額取崩と同じ）の
-    // どちらも意味を持つため、両方のカードを表示する。
+    // 定率取崩と同じ4項目（毎月/20年後/40年後/最終残高）で表示を揃える
     showTrendCards: true,
-    showDepletionCard: true,
+    showDepletionCard: false,
     compute(principal, annualRate) {
       const fixedWithdrawal = Number(w.dynamicFixed.value);
       const inflationRate = Number(w.dynamicInflation.value);
