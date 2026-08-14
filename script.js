@@ -142,11 +142,19 @@ const w = {
   rate: document.getElementById("w-rate"),
   withdrawal: document.getElementById("w-withdrawal"),
   fixedWithdrawal: document.getElementById("w-fixed-withdrawal"),
+  fixedInflation: document.getElementById("w-fixed-inflation"),
+  dynamicFixed: document.getElementById("w-dynamic-fixed"),
+  dynamicInflation: document.getElementById("w-dynamic-inflation"),
+  dynamicRate: document.getElementById("w-dynamic-rate"),
 
   principalValue: document.getElementById("w-principal-value"),
   rateValue: document.getElementById("w-rate-value"),
   withdrawalValue: document.getElementById("w-withdrawal-value"),
   fixedWithdrawalValue: document.getElementById("w-fixed-withdrawal-value"),
+  fixedInflationValue: document.getElementById("w-fixed-inflation-value"),
+  dynamicFixedValue: document.getElementById("w-dynamic-fixed-value"),
+  dynamicInflationValue: document.getElementById("w-dynamic-inflation-value"),
+  dynamicRateValue: document.getElementById("w-dynamic-rate-value"),
 
   finalBalance: document.getElementById("w-final-balance"),
   withdrawalInitial: document.getElementById("w-withdrawal-initial"),
@@ -157,6 +165,7 @@ const w = {
 
   rateModeControl: document.getElementById("rate-mode-control"),
   fixedModeControl: document.getElementById("fixed-mode-control"),
+  dynamicModeControl: document.getElementById("dynamic-mode-control"),
   card20y: document.getElementById("w-card-20y"),
   card40y: document.getElementById("w-card-40y"),
   cardDepletion: document.getElementById("w-card-depletion"),
@@ -164,6 +173,7 @@ const w = {
 
 const modeRateBtn = document.getElementById("mode-rate-btn");
 const modeFixedBtn = document.getElementById("mode-fixed-btn");
+const modeDynamicBtn = document.getElementById("mode-dynamic-btn");
 const modeToggleIndicator = document.getElementById("mode-toggle-indicator");
 const totalWithdrawalLabel = document.getElementById("total-withdrawal-label");
 
@@ -176,7 +186,7 @@ const copyLinkBtn = document.getElementById("copyLinkBtn");
 let latestFinalBalance = 0;
 // 連携トグルの現在値
 let isLinked = linkToggle.checked;
-// 取崩フェーズの方式: "rate"（定率取崩）| "fixed"（定額取崩）。初期値は定率。
+// 取崩フェーズの方式: "rate"（定率取崩）| "fixed"（定額取崩）| "dynamic"（動的取崩）。初期値は定率。
 let withdrawalMode = "rate";
 // 取崩フェーズの「毎月の取崩額」（最終統合結果に使用する生の数値）
 let latestWithdrawalInitial = 0;
@@ -298,7 +308,7 @@ function renderAccumulate() {
 });
 
 // =====================================================================
-// Stage 2: 取崩シミュレーション（定率取崩 / 定額取崩）
+// Stage 2: 取崩シミュレーション（定率取崩 / 定額取崩 / 動的取崩）
 // =====================================================================
 
 // 定率取崩・定額取崩に共通する40年間の月次シミュレーション。
@@ -343,15 +353,87 @@ function buildWithdrawalSeries(principal, annualRate, withdrawalRate) {
   });
 }
 
-function buildFixedWithdrawalSeries(principal, annualRate, monthlyWithdrawal) {
+// 指定した基準額に、インフレ率を毎月複利で反映した「その月時点の額」を返す。
+// month=1（初月）はインフレ反映前の基準額そのものになるよう (month - 1) 乗にしている。
+function applyInflation(baseAmount, inflationRate, month) {
+  const monthlyInflationFactor = 1 + inflationRate / 100 / 12;
+  return baseAmount * monthlyInflationFactor ** (month - 1);
+}
+
+function buildFixedWithdrawalSeries(principal, annualRate, monthlyWithdrawal, inflationRate) {
   return simulateWithdrawal({
     principal,
     annualRate,
     months: 40 * 12,
     // 定額方式: 毎月、残高に関わらず一定額を取り崩そうとする。
-    getWithdrawal: () => monthlyWithdrawal,
+    // インフレ率が設定されている場合、取崩額は毎年インフレ率分だけ増えていく。
+    getWithdrawal: ({ month }) => applyInflation(monthlyWithdrawal, inflationRate, month),
   });
 }
+
+// 動的取崩（定額＋定率のハイブリッド）: 生活費の不足分など「必ず確保したい額」を
+// 定額（固定）で取り崩しつつ、それとは別に残高に応じた「ゆとり分」を取崩率（余剰）で
+// 取り崩す。両者は独立したスライダーで指定し、毎月その合計額を取り崩す。
+// 定額（固定）部分は、インフレ率に応じて毎年増えていく（余剰の取崩率には影響しない）。
+function buildDynamicWithdrawalSeries(principal, annualRate, fixedWithdrawal, inflationRate, surplusRate) {
+  return simulateWithdrawal({
+    principal,
+    annualRate,
+    months: 40 * 12,
+    getWithdrawal: ({ preGrowthBalance, month }) =>
+      applyInflation(fixedWithdrawal, inflationRate, month) + (preGrowthBalance * (surplusRate / 100)) / 12,
+  });
+}
+
+// 取崩モードごとの設定を1箇所に集約したもの。renderWithdraw / setWithdrawalMode /
+// 共有URLの復元は、いずれもここを見て動作を切り替える。
+// モードを追加したいときは、対応するUI要素を用意したうえでここに1エントリ足すだけでよい。
+const withdrawalModeConfigs = {
+  rate: {
+    button: modeRateBtn,
+    control: w.rateModeControl,
+    totalLabel: "毎月の取崩額（定率取崩）",
+    showTrendCards: true, // 取崩額が変動するため、20年後/40年後の推移カードを表示
+    showDepletionCard: false,
+    compute(principal, annualRate) {
+      const withdrawalRate = Number(w.withdrawal.value);
+      w.withdrawalValue.value = formatPercent(withdrawalRate);
+      return buildWithdrawalSeries(principal, annualRate, withdrawalRate);
+    },
+  },
+  fixed: {
+    button: modeFixedBtn,
+    control: w.fixedModeControl,
+    totalLabel: "毎月の取崩額（定額取崩）",
+    showTrendCards: false,
+    showDepletionCard: true, // 定額分があるため理論上資産が尽きうる
+    compute(principal, annualRate) {
+      const monthlyWithdrawal = Number(w.fixedWithdrawal.value);
+      const inflationRate = Number(w.fixedInflation.value);
+      w.fixedWithdrawalValue.value = formatCurrency(monthlyWithdrawal);
+      w.fixedInflationValue.value = formatPercent(inflationRate);
+      return buildFixedWithdrawalSeries(principal, annualRate, monthlyWithdrawal, inflationRate);
+    },
+  },
+  dynamic: {
+    button: modeDynamicBtn,
+    control: w.dynamicModeControl,
+    totalLabel: "毎月の取崩額（動的取崩）",
+    // 動的取崩は「取崩額の推移」（定率取崩と同じ）と「枯渇時期」（定額取崩と同じ）の
+    // どちらも意味を持つため、両方のカードを表示する。
+    showTrendCards: true,
+    showDepletionCard: true,
+    compute(principal, annualRate) {
+      const fixedWithdrawal = Number(w.dynamicFixed.value);
+      const inflationRate = Number(w.dynamicInflation.value);
+      const surplusRate = Number(w.dynamicRate.value);
+      w.dynamicFixedValue.value = formatCurrency(fixedWithdrawal);
+      w.dynamicInflationValue.value = formatPercent(inflationRate);
+      w.dynamicRateValue.value = formatPercent(surplusRate);
+      return buildDynamicWithdrawalSeries(principal, annualRate, fixedWithdrawal, inflationRate, surplusRate);
+    },
+  },
+};
 
 function drawWithdrawChart(series) {
   const width = 760;
@@ -504,25 +586,15 @@ function renderWithdraw() {
   w.principalValue.value = formatCurrency(principal);
   w.rateValue.value = formatPercent(annualRate);
 
-  let result;
-  if (withdrawalMode === "fixed") {
-    const monthlyWithdrawal = Number(w.fixedWithdrawal.value);
-    w.fixedWithdrawalValue.value = formatCurrency(monthlyWithdrawal);
-    result = buildFixedWithdrawalSeries(principal, annualRate, monthlyWithdrawal);
-  } else {
-    const withdrawalRate = Number(w.withdrawal.value);
-    w.withdrawalValue.value = formatPercent(withdrawalRate);
-    result = buildWithdrawalSeries(principal, annualRate, withdrawalRate);
-  }
-
-  const { points, bars, depletionMonth } = result;
+  const activeConfig = withdrawalModeConfigs[withdrawalMode];
+  const { points, bars, depletionMonth } = activeConfig.compute(principal, annualRate);
   const finalBalance = points[points.length - 1].y;
   w.finalBalance.textContent = formatCurrency(finalBalance);
 
   latestWithdrawalInitial = bars[0] ?? 0;
   w.withdrawalInitial.textContent = formatCurrency(latestWithdrawalInitial);
 
-  if (withdrawalMode === "fixed") {
+  if (activeConfig.showDepletionCard) {
     if (depletionMonth == null) {
       w.depletion.textContent = "40年以内に枯渇なし";
     } else {
@@ -530,7 +602,9 @@ function renderWithdraw() {
       const months = depletionMonth % 12;
       w.depletion.textContent = `${years}年${months}か月`;
     }
-  } else {
+  }
+
+  if (activeConfig.showTrendCards) {
     w.withdrawal20y.textContent = formatCurrency(bars[20 * 12 - 1] ?? 0);
     w.withdrawal40y.textContent = formatCurrency(bars[bars.length - 1] ?? 0);
   }
@@ -541,7 +615,15 @@ function renderWithdraw() {
   syncShareUrl();
 }
 
-[w.rate, w.withdrawal, w.fixedWithdrawal].forEach((input) => {
+[
+  w.rate,
+  w.withdrawal,
+  w.fixedWithdrawal,
+  w.fixedInflation,
+  w.dynamicFixed,
+  w.dynamicInflation,
+  w.dynamicRate,
+].forEach((input) => {
   input.addEventListener("input", renderWithdraw);
 });
 
@@ -552,11 +634,11 @@ w.principal.addEventListener("input", () => {
 });
 
 // =====================================================================
-// 取崩フェーズ: 定率取崩 / 定額取崩の切り替え
+// 取崩フェーズ: 定率取崩 / 定額取崩 / 動的取崩の切り替え
 // =====================================================================
 
 function positionModeToggleIndicator(instant = false) {
-  const activeBtn = withdrawalMode === "rate" ? modeRateBtn : modeFixedBtn;
+  const activeBtn = withdrawalModeConfigs[withdrawalMode].button;
 
   if (instant) {
     // 初期表示時はトランジションを一時的に無効化し、パッと出た状態にする。
@@ -577,27 +659,28 @@ function setWithdrawalMode(mode, options = {}) {
   const { instant = false } = options;
   withdrawalMode = mode;
 
-  modeRateBtn.classList.toggle("active", mode === "rate");
-  modeRateBtn.setAttribute("aria-pressed", String(mode === "rate"));
-  modeFixedBtn.classList.toggle("active", mode === "fixed");
-  modeFixedBtn.setAttribute("aria-pressed", String(mode === "fixed"));
+  Object.entries(withdrawalModeConfigs).forEach(([key, config]) => {
+    const isActive = key === mode;
+    config.button.classList.toggle("active", isActive);
+    config.button.setAttribute("aria-pressed", String(isActive));
+    config.control.classList.toggle("hidden", !isActive);
+  });
 
   positionModeToggleIndicator(instant);
 
-  w.rateModeControl.classList.toggle("hidden", mode !== "rate");
-  w.fixedModeControl.classList.toggle("hidden", mode !== "fixed");
+  const activeConfig = withdrawalModeConfigs[mode];
+  w.card20y.classList.toggle("hidden", !activeConfig.showTrendCards);
+  w.card40y.classList.toggle("hidden", !activeConfig.showTrendCards);
+  w.cardDepletion.classList.toggle("hidden", !activeConfig.showDepletionCard);
 
-  w.card20y.classList.toggle("hidden", mode !== "rate");
-  w.card40y.classList.toggle("hidden", mode !== "rate");
-  w.cardDepletion.classList.toggle("hidden", mode !== "fixed");
-
-  totalWithdrawalLabel.textContent = mode === "rate" ? "毎月の取崩額（定率取崩）" : "毎月の取崩額（定額取崩）";
+  totalWithdrawalLabel.textContent = activeConfig.totalLabel;
 
   renderWithdraw();
 }
 
-modeRateBtn.addEventListener("click", () => setWithdrawalMode("rate"));
-modeFixedBtn.addEventListener("click", () => setWithdrawalMode("fixed"));
+Object.entries(withdrawalModeConfigs).forEach(([mode, config]) => {
+  config.button.addEventListener("click", () => setWithdrawalMode(mode));
+});
 window.addEventListener("resize", () => positionModeToggleIndicator(true));
 
 // =====================================================================
@@ -927,6 +1010,10 @@ const shareSliderFields = [
   { param: "wrate", input: w.rate },
   { param: "wwithdrawal", input: w.withdrawal },
   { param: "wfixedwithdrawal", input: w.fixedWithdrawal },
+  { param: "wfixedinflation", input: w.fixedInflation },
+  { param: "wdynamicfixed", input: w.dynamicFixed },
+  { param: "wdynamicinflation", input: w.dynamicInflation },
+  { param: "wdynamicrate", input: w.dynamicRate },
 ];
 
 function parseQueryState() {
@@ -942,7 +1029,7 @@ function parseQueryState() {
 
   return {
     sliderValues,
-    wMode: params.get("wmode") === "fixed" ? "fixed" : "rate",
+    wMode: params.get("wmode") in withdrawalModeConfigs ? params.get("wmode") : "rate",
     linked: params.has("linked") ? params.get("linked") !== "0" : isLinked,
     pension: {
       avgIncome: clamp(Number(params.get("avgIncome") ?? pensionDefaults.avgIncome), 0, 20000000),
