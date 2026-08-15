@@ -767,7 +767,7 @@ function updatePensionInputs() {
   p.startAge2.value = pensionState.startAge2;
   p.returnRate.value = pensionState.returnRate;
 
-  p.avgIncomeValue.textContent = formatNumber(pensionState.avgIncome);
+  p.avgIncomeValue.textContent = formatCurrency(pensionState.avgIncome);
   p.yearsNationalValue.textContent = pensionState.yearsNational;
   p.yearsKoseiValue.textContent = pensionState.yearsKosei;
   p.startAge1Value.textContent = pensionState.startAge1;
@@ -845,8 +845,8 @@ function updatePensionResults(derived) {
 
   p.monthly1Age.textContent = `${pensionState.startAge1}歳`;
   p.monthly2Age.textContent = `${pensionState.startAge2}歳`;
-  p.monthly1.textContent = formatNumber(monthly1);
-  p.monthly2.textContent = formatNumber(monthly2);
+  p.monthly1.textContent = formatCurrency(monthly1);
+  p.monthly2.textContent = formatCurrency(monthly2);
 
   p.breakevenText.textContent =
     breakevenAge !== null
@@ -855,9 +855,9 @@ function updatePensionResults(derived) {
 
   const totalAtMaxAge1 = Math.round(series1[series1.length - 1].value);
   const totalAtMaxAge2 = Math.round(series2[series2.length - 1].value);
-  p.investmentText.textContent = `${pensionState.startAge1}歳開始の${pensionMaxAge}歳時点の運用累計は約 ${formatNumber(
+  p.investmentText.textContent = `${pensionState.startAge1}歳開始の${pensionMaxAge}歳時点の運用累計は約 ${formatCurrency(
     totalAtMaxAge1
-  )} 円、${pensionState.startAge2}歳開始は約 ${formatNumber(totalAtMaxAge2)} 円です。`;
+  )}、${pensionState.startAge2}歳開始は約 ${formatCurrency(totalAtMaxAge2)}です。`;
 }
 
 function formatPensionAxisValue(value) {
