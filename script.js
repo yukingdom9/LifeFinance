@@ -618,12 +618,19 @@ function renderWithdraw() {
   w.rate,
   w.withdrawal,
   w.fixedWithdrawal,
-  w.fixedInflation,
   w.dynamicFixed,
-  w.dynamicInflation,
   w.dynamicRate,
 ].forEach((input) => {
   input.addEventListener("input", renderWithdraw);
+});
+
+// 定額取崩・動的取崩の想定インフレ率は同じ前提を共有するため、一方を動かすともう一方も連動する
+[w.fixedInflation, w.dynamicInflation].forEach((input) => {
+  input.addEventListener("input", () => {
+    w.fixedInflation.value = input.value;
+    w.dynamicInflation.value = input.value;
+    renderWithdraw();
+  });
 });
 
 w.principal.addEventListener("input", () => {
@@ -1009,9 +1016,9 @@ const shareSliderFields = [
   { param: "wrate", input: w.rate },
   { param: "wwithdrawal", input: w.withdrawal },
   { param: "wfixedwithdrawal", input: w.fixedWithdrawal },
+  // 想定インフレ率は定額取崩・動的取崩で連動するため、URLパラメータは1つに集約する
   { param: "wfixedinflation", input: w.fixedInflation },
   { param: "wdynamicfixed", input: w.dynamicFixed },
-  { param: "wdynamicinflation", input: w.dynamicInflation },
   { param: "wdynamicrate", input: w.dynamicRate },
 ];
 
@@ -1049,6 +1056,8 @@ function applyParsedState(parsed) {
   shareSliderFields.forEach(({ param, input }) => {
     input.value = parsed.sliderValues[param];
   });
+  // 想定インフレ率（動的取崩）はURLに保存していないため、定額取崩側の値から復元する
+  w.dynamicInflation.value = w.fixedInflation.value;
   withdrawalMode = parsed.wMode;
   linkToggle.checked = parsed.linked;
   isLinked = parsed.linked;

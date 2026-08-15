@@ -156,6 +156,14 @@
             <div id="fixed-mode-control" class="mode-control hidden">
               <label class="control">
                 <div class="control-head">
+                  <span>想定インフレ率</span>
+                  <output id="w-fixed-inflation-value"></output>
+                </div>
+                <input type="range" id="w-fixed-inflation" min="0" max="10" step="0.1" value="2" />
+              </label>
+
+              <label class="control">
+                <div class="control-head">
                   <span>毎月の取崩額</span>
                   <output id="w-fixed-withdrawal-value"></output>
                 </div>
@@ -168,20 +176,21 @@
                   value="140000"
                 />
               </label>
-
-              <label class="control">
-                <div class="control-head">
-                  <span>想定インフレ率</span>
-                  <output id="w-fixed-inflation-value"></output>
-                </div>
-                <input type="range" id="w-fixed-inflation" min="0" max="10" step="0.1" value="2" />
-              </label>
             </div>
 
             <div id="dynamic-mode-control" class="mode-control hidden">
+              <label class="control">
+                <div class="control-head">
+                  <span>想定インフレ率</span>
+                  <output id="w-dynamic-inflation-value"></output>
+                </div>
+                <input type="range" id="w-dynamic-inflation" min="0" max="10" step="0.1" value="2" />
+              </label>
+
               <p class="linked-readout active">
                 💡 毎月「年金不足分」で必要な生活費を確保しつつ、残高に対する「追加で取り崩す割合」でゆとり分を取り崩します（両方を合算した金額が毎月取り崩されます）。「年金不足分」はインフレ率に応じて毎年増えていきます。
               </p>
+
               <label class="control">
                 <div class="control-head">
                   <span>年金不足分</span>
@@ -195,14 +204,6 @@
                   step="10000"
                   value="60000"
                 />
-              </label>
-
-              <label class="control">
-                <div class="control-head">
-                  <span>想定インフレ率</span>
-                  <output id="w-dynamic-inflation-value"></output>
-                </div>
-                <input type="range" id="w-dynamic-inflation" min="0" max="10" step="0.1" value="2" />
               </label>
 
               <label class="control">
