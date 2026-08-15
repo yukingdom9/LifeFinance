@@ -3,16 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>資産形成・老後資金シミュレーション</title>
+    <title>これからのお金を考えてみよう</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <main class="page">
       <header class="hero">
         <p class="eyebrow">Simulation</p>
-        <h1>資産形成・老後資金シミュレーション</h1>
+        <h1>これからのお金を考えてみよう</h1>
         <p class="lead">
-          積立投資 → 定率/定額取り崩し → 年金受給 の3つのシミュレーションをひとつにつなげ、資産の推移と老後に毎月いくら使えるのかまで確認できます。
+          積立投資 → 取り崩し → 年金受給の3つのシミュレーションをひとつにつなげて、将来いくらになるのか、老後に毎月いくら使えるのかを確認できます。
         </p>
       </header>
 
@@ -25,12 +25,12 @@
 
         <div class="app-shell">
           <section class="panel controls-panel">
-            <h2 class="panel-title">積立投資シミュレーション</h2>
-            <p class="subtitle">元本・積立額・年利率・運用期間を動かすと、将来の資産推移が自動で更新されます。</p>
+            <h2 class="panel-title">いくら貯まる？</h2>
+            <p class="subtitle">初期資産・毎月の積立額・想定利回り・運用期間を設定すると、将来の資産額を予測できます。</p>
 
             <label class="control">
               <div class="control-head">
-                <span>元本</span>
+                <span>初期資産</span>
                 <output id="a-principal-value"></output>
               </div>
               <input id="a-principal" type="range" min="0" max="100000000" step="10000" value="1000000" />
@@ -38,7 +38,7 @@
 
             <label class="control">
               <div class="control-head">
-                <span>積立（月額）</span>
+                <span>毎月の積立額</span>
                 <output id="a-monthly-value"></output>
               </div>
               <input id="a-monthly" type="range" min="0" max="500000" step="1000" value="100000" />
@@ -46,7 +46,7 @@
 
             <label class="control">
               <div class="control-head">
-                <span>年利率</span>
+                <span>想定利回り</span>
                 <output id="a-rate-value"></output>
               </div>
               <input id="a-rate" type="range" min="0" max="20" step="0.1" value="5" />
@@ -86,7 +86,7 @@
         <div class="connector-card">
           <span class="connector-icon">⇣</span>
           <div class="connector-text">
-            <p class="connector-title">積立の最終残高を、取崩シミュレーションの元本として使う</p>
+            <p class="connector-title">積立投資フェーズの最終残高を、取崩フェーズの元本として使う</p>
             <p class="connector-detail">現在の最終残高: <strong id="connector-final-balance">-</strong></p>
           </div>
           <label class="switch" title="連携のON/OFFを切り替え">
@@ -105,9 +105,9 @@
 
         <div class="app-shell">
           <section class="panel controls-panel">
-            <h2 class="panel-title">取崩シミュレーション</h2>
+            <h2 class="panel-title">どうやって取り崩す？</h2>
             <p class="subtitle">
-              「定率取崩」「定額取崩」「動的取崩」のいずれかで資産を取り崩すか選んで、毎月の取崩額と資産推移を確認できます。
+              「定率取崩」「定額取崩」「動的取崩」から方法を選ぶと、毎月の取崩額と資産の推移を確認できます。
             </p>
 
             <div class="mode-toggle" role="group" aria-label="取崩方法の選択">
@@ -132,12 +132,12 @@
             </label>
 
             <p class="linked-readout" id="linked-readout">
-              🔗 積立投資シミュレーションの最終残高と連携中です。手動で調整するには上のトグルをOFFにしてください。
+              🔗 積立投資フェーズの最終残高と連携中です。手動で調整するには上のトグルをOFFにしてください。
             </p>
 
             <label class="control">
               <div class="control-head">
-                <span>年利率</span>
+                <span>想定利回り</span>
                 <output id="w-rate-value"></output>
               </div>
               <input type="range" id="w-rate" min="0" max="20" step="0.1" value="5" />
@@ -171,7 +171,7 @@
 
               <label class="control">
                 <div class="control-head">
-                  <span>インフレ率</span>
+                  <span>想定インフレ率</span>
                   <output id="w-fixed-inflation-value"></output>
                 </div>
                 <input type="range" id="w-fixed-inflation" min="0" max="10" step="0.1" value="2" />
@@ -180,11 +180,11 @@
 
             <div id="dynamic-mode-control" class="mode-control hidden">
               <p class="linked-readout active">
-                💡 毎月「年金補充額」で必要な生活費の不足分を確保しつつ、残高に対する「取崩率（余剰）」でゆとり分を取り崩します（両方を合算した金額が毎月取り崩されます）。「年金補充額」はインフレ率に応じて毎年増えていきます。
+                💡 毎月「年金不足分」で必要な生活費を確保しつつ、残高に対する「追加で取り崩す割合」でゆとり分を取り崩します（両方を合算した金額が毎月取り崩されます）。「年金不足分」はインフレ率に応じて毎年増えていきます。
               </p>
               <label class="control">
                 <div class="control-head">
-                  <span>年金補充額</span>
+                  <span>年金不足分</span>
                   <output id="w-dynamic-fixed-value"></output>
                 </div>
                 <input
@@ -199,7 +199,7 @@
 
               <label class="control">
                 <div class="control-head">
-                  <span>インフレ率</span>
+                  <span>想定インフレ率</span>
                   <output id="w-dynamic-inflation-value"></output>
                 </div>
                 <input type="range" id="w-dynamic-inflation" min="0" max="10" step="0.1" value="2" />
@@ -207,7 +207,7 @@
 
               <label class="control">
                 <div class="control-head">
-                  <span>取崩率（余剰）</span>
+                  <span>追加で取り崩す割合</span>
                   <output id="w-dynamic-rate-value"></output>
                 </div>
                 <input type="range" id="w-dynamic-rate" min="0" max="20" step="0.1" value="3" />
@@ -252,9 +252,9 @@
 
         <div class="app-shell">
           <section class="panel controls-panel">
-            <h2 class="panel-title">年金受給シミュレーション</h2>
+            <h2 class="panel-title">年金いくらもらえるの？</h2>
             <p class="subtitle">
-              平均年収・加入年数・受給開始年齢・運用利回りを動かすと、月額受給額と損益分岐点が自動で更新されます。
+              平均年収・加入年数・受給開始年齢・想定利回りを設定すると、毎月の受給額と損益分岐点を確認できます。
             </p>
 
             <label class="control">
@@ -299,7 +299,7 @@
 
             <label class="control">
               <div class="control-head">
-                <span>運用利回り</span>
+                <span>想定利回り</span>
                 <output><span id="p-returnRateValue"></span>%</output>
               </div>
               <input id="p-returnRate" type="range" min="0" max="20" step="0.1" />
@@ -309,7 +309,7 @@
           <section class="panel chart-panel">
             <div class="summary-grid">
               <article class="summary-card">
-                <h2>月額受給額</h2>
+                <h2>年金月額</h2>
                 <p>開始年齢① <strong id="p-monthly1Age"></strong>：<span id="p-monthly1" class="amount"></span></p>
                 <p>開始年齢② <strong id="p-monthly2Age"></strong>：<span id="p-monthly2" class="amount amount-b"></span></p>
               </article>
@@ -339,7 +339,7 @@
         <section class="panel total-panel">
           <h2 class="panel-title">老後、毎月いくら使える？</h2>
           <p class="subtitle">
-            取崩シミュレーションの「毎月の取崩額」と、年金受給シミュレーションの「開始年齢②」の月額受給額を合計した金額です。
+            取崩シミュレーションの「毎月の取崩額」と、年金受給シミュレーションの「開始年齢②」の月額受給額を合計して、老後に毎月使える金額を確認できます。
           </p>
 
           <div class="total-breakdown">
