@@ -240,9 +240,24 @@
               </article>
             </div>
             <svg id="withdraw-chart" viewBox="0 0 760 420" role="img" aria-label="取り崩しシミュレーションのグラフ"></svg>
+            <div class="legend-row">
+              <span class="legend-entry"><span class="legend-item legend-a"></span>毎月の取崩額</span>
+              <span class="legend-entry"><span class="legend-item legend-area"></span>資産残高</span>
+            </div>
           </section>
         </div>
       </section>
+
+      <!-- ============== Connector spacer (取崩⇔年金受給フェーズ間の空間を、実コネクタと揃える) ============== -->
+      <div class="connector connector-spacer" aria-hidden="true">
+        <div class="connector-card">
+          <span class="connector-icon"></span>
+          <div class="connector-text">
+            <p class="connector-title">&nbsp;</p>
+            <p class="connector-detail">&nbsp;</p>
+          </div>
+        </div>
+      </div>
 
       <!-- ============== Stage 3: 年金受給 ============== -->
       <section class="stage" id="stage-pension">
@@ -321,14 +336,25 @@
               </article>
             </div>
 
-            <canvas id="p-chartCanvas" width="840" height="440"></canvas>
+            <svg id="pension-chart" viewBox="0 0 760 420" role="img" aria-label="年金受給シミュレーションのグラフ"></svg>
             <div class="legend-row">
-              <span class="legend-item legend-a"></span> 年齢①ライン
-              <span class="legend-item legend-b"></span> 年齢②ライン
+              <span class="legend-entry"><span class="legend-item legend-a"></span>年齢①ライン</span>
+              <span class="legend-entry"><span class="legend-item legend-b"></span>年齢②ライン</span>
             </div>
           </section>
         </div>
       </section>
+
+      <!-- ============== Connector spacer (年金受給フェーズ⇔統合結果間の空間を、実コネクタと揃える) ============== -->
+      <div class="connector connector-spacer" aria-hidden="true">
+        <div class="connector-card">
+          <span class="connector-icon"></span>
+          <div class="connector-text">
+            <p class="connector-title">&nbsp;</p>
+            <p class="connector-detail">&nbsp;</p>
+          </div>
+        </div>
+      </div>
 
       <!-- ============== Stage 4: 最終結果（統合） ============== -->
       <section class="stage" id="stage-total">
@@ -361,6 +387,17 @@
           </div>
         </section>
       </section>
+
+      <!-- ============== Connector spacer (統合結果⇔共有リンク間の空間を、実コネクタと揃える) ============== -->
+      <div class="connector connector-spacer" aria-hidden="true">
+        <div class="connector-card">
+          <span class="connector-icon"></span>
+          <div class="connector-text">
+            <p class="connector-title">&nbsp;</p>
+            <p class="connector-detail">&nbsp;</p>
+          </div>
+        </div>
+      </div>
 
       <div class="lf-link-row">
         <div class="lf-link-card">

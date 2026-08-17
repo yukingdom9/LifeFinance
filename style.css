@@ -241,16 +241,11 @@ svg {
   aspect-ratio: 760 / 420;
 }
 
-canvas {
-  display: block;
-  width: 100%;
-  height: auto;
-  border-radius: 18px;
-  background: #f4f6fb;
-  box-shadow: inset 0 0 0 1px #dbe2ec;
+#pension-chart {
+  aspect-ratio: 760 / 420;
 }
 
-/* ---------- Legend (pension chart) ---------- */
+/* ---------- Legend (withdraw chart / pension chart) ---------- */
 
 .legend-row {
   display: flex;
@@ -262,12 +257,16 @@ canvas {
   font-size: 0.85rem;
 }
 
+.legend-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .legend-item {
   width: 16px;
   height: 8px;
   display: inline-block;
-  vertical-align: middle;
-  margin-right: 8px;
   border-radius: 4px;
 }
 
@@ -277,6 +276,11 @@ canvas {
 
 .legend-b {
   background: #d97706;
+}
+
+.legend-area {
+  background: #d2dde9;
+  border: 1px solid #b7bec2;
 }
 
 /* ---------- Link connector between accumulate / withdraw ---------- */
@@ -332,6 +336,12 @@ canvas {
 .connector-detail strong {
   color: #336485;
   font-variant-numeric: tabular-nums;
+}
+
+/* 積立⇔取崩間の実コネクタ（ラジオボタン領域）と同じ高さぶんの
+   空間だけを、他のフェーズ境界にも確保するための透明コネクタ。 */
+.connector-spacer {
+  visibility: hidden;
 }
 
 /* Toggle switch */

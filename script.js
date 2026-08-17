@@ -534,48 +534,6 @@ function drawWithdrawChart(series) {
   );
 
   drawChartYearLabels(w.chart, { width, height, margin, plotWidth, maxYears: 40 });
-
-  const legend = svgEl("g", {});
-  const lineLegend = svgEl("line", {
-    x1: margin.left + 8,
-    y1: 16,
-    x2: margin.left + 28,
-    y2: 16,
-    stroke: "#336485",
-    "stroke-width": 3.5,
-  });
-  legend.appendChild(lineLegend);
-
-  const lineText = svgEl("text", {
-    x: margin.left + 34,
-    y: 20,
-    fill: "#3c4a60",
-    "font-size": 12,
-  });
-  lineText.textContent = "毎月の取崩額";
-  legend.appendChild(lineText);
-
-  const barLegend = svgEl("rect", {
-    x: margin.left + 158,
-    y: 12,
-    width: 16,
-    height: 8,
-    fill: "#D2DDE9",
-    stroke: "#B7BEC2",
-    "stroke-width": 0.75,
-  });
-  legend.appendChild(barLegend);
-
-  const barText = svgEl("text", {
-    x: margin.left + 180,
-    y: 20,
-    fill: "#3c4a60",
-    "font-size": 12,
-  });
-  barText.textContent = "資産残高";
-  legend.appendChild(barText);
-
-  w.chart.appendChild(legend);
 }
 
 function renderWithdraw() {
@@ -750,16 +708,9 @@ const p = {
   monthly2: document.getElementById("p-monthly2"),
   breakevenText: document.getElementById("p-breakevenText"),
   investmentText: document.getElementById("p-investmentText"),
-  chartCanvas: document.getElementById("p-chartCanvas"),
+  chart: document.getElementById("pension-chart"),
 };
 
-const pensionCtx = p.chartCanvas.getContext("2d");
-const pensionGraphBounds = {
-  left: 78,
-  right: 810,
-  top: 28,
-  bottom: 378,
-};
 const pensionMinAge = 60;
 const pensionMaxAge = 100;
 
@@ -878,85 +829,86 @@ function formatPensionAxisValue(value) {
   return `${Math.round(value)}円`;
 }
 
-function drawPensionAxis(maxValue) {
-  pensionCtx.clearRect(0, 0, p.chartCanvas.width, p.chartCanvas.height);
+// 積立投資チャート（drawAccumulateChart）と同じ基本構造
+// （白いプロットエリア＋横方向のグリッド線のみ、縦線なし）で描画する。
+function drawPensionChart(series1, series2, maxValue) {
+  const width = 760;
+  const height = 420;
+  const margin = { top: 24, right: 24, bottom: 48, left: 84 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
 
-  pensionCtx.fillStyle = "#ffffff";
-  pensionCtx.fillRect(
-    pensionGraphBounds.left,
-    pensionGraphBounds.top,
-    pensionGraphBounds.right - pensionGraphBounds.left,
-    pensionGraphBounds.bottom - pensionGraphBounds.top
-  );
+  drawChartFrame(p.chart, width, height, margin, plotWidth, plotHeight);
 
-  pensionCtx.strokeStyle = "rgba(36, 70, 111, 0.12)";
-  pensionCtx.lineWidth = 1;
-
-  for (let i = 0; i <= 4; i += 1) {
-    const y = pensionGraphBounds.top + ((pensionGraphBounds.bottom - pensionGraphBounds.top) / 4) * i;
-    pensionCtx.beginPath();
-    pensionCtx.moveTo(pensionGraphBounds.left, y);
-    pensionCtx.lineTo(pensionGraphBounds.right, y);
-    pensionCtx.stroke();
-  }
-
-  for (let i = 0; i <= 4; i += 1) {
-    const x = pensionGraphBounds.left + ((pensionGraphBounds.right - pensionGraphBounds.left) / 4) * i;
-    pensionCtx.beginPath();
-    pensionCtx.moveTo(x, pensionGraphBounds.top);
-    pensionCtx.lineTo(x, pensionGraphBounds.bottom);
-    pensionCtx.stroke();
-  }
-
-  pensionCtx.fillStyle = "#7b8aa3";
-  pensionCtx.font = "13px sans-serif";
-  pensionCtx.textAlign = "right";
-  pensionCtx.textBaseline = "middle";
-  for (let i = 0; i <= 4; i += 1) {
-    const value = maxValue * (1 - i / 4);
-    const y = pensionGraphBounds.top + ((pensionGraphBounds.bottom - pensionGraphBounds.top) / 4) * i;
-    pensionCtx.fillText(formatPensionAxisValue(value), pensionGraphBounds.left - 12, y);
-  }
-
-  pensionCtx.textAlign = "center";
-  pensionCtx.textBaseline = "top";
-  for (let i = 0; i <= 4; i += 1) {
-    const age = pensionMinAge + Math.round((pensionMaxAge - pensionMinAge) * (i / 4));
-    const x = pensionGraphBounds.left + ((pensionGraphBounds.right - pensionGraphBounds.left) / 4) * i;
-    pensionCtx.fillText(`${age}歳`, x, pensionGraphBounds.bottom + 12);
-  }
-}
-
-function drawPensionSeries(series, color, options = {}) {
-  pensionCtx.strokeStyle = color;
-  pensionCtx.lineWidth = options.lineWidth ?? 3;
-  pensionCtx.setLineDash(options.dash ?? []);
-  pensionCtx.beginPath();
-
-  series.forEach((point, index) => {
-    const x =
-      pensionGraphBounds.left +
-      (pensionGraphBounds.right - pensionGraphBounds.left) * (index / (series.length - 1));
-    const y =
-      pensionGraphBounds.bottom -
-      (pensionGraphBounds.bottom - pensionGraphBounds.top) * (point.value / options.maxValue);
-    if (index === 0) {
-      pensionCtx.moveTo(x, y);
-    } else {
-      pensionCtx.lineTo(x, y);
-    }
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map((t) => maxValue * t);
+  ticks.forEach((tickValue, index) => {
+    const y = margin.top + plotHeight * (1 - index / 4);
+    p.chart.appendChild(
+      svgEl("line", {
+        x1: margin.left,
+        y1: y,
+        x2: width - margin.right,
+        y2: y,
+        stroke: "rgba(36,70,111,0.12)",
+      })
+    );
+    const label = svgEl("text", {
+      x: margin.left - 12,
+      y: y + 4,
+      fill: "#7b8aa3",
+      "font-size": 12,
+      "text-anchor": "end",
+    });
+    label.textContent = formatPensionAxisValue(tickValue);
+    p.chart.appendChild(label);
   });
-  pensionCtx.stroke();
-  pensionCtx.setLineDash([]);
+
+  drawChartAxisLines(p.chart, width, height, margin);
+
+  const ageRange = pensionMaxAge - pensionMinAge;
+  const drawLine = (series, color) => {
+    const pathData = series
+      .map((point, index) => {
+        const x = margin.left + ((point.age - pensionMinAge) / ageRange) * plotWidth;
+        const y = margin.top + plotHeight * (1 - Math.max(0, point.value) / maxValue);
+        return `${index === 0 ? "M" : "L"}${x.toFixed(2)} ${y.toFixed(2)}`;
+      })
+      .join(" ");
+    p.chart.appendChild(
+      svgEl("path", {
+        d: pathData,
+        fill: "none",
+        stroke: color,
+        "stroke-width": 3,
+        "stroke-linejoin": "round",
+        "stroke-linecap": "round",
+      })
+    );
+  };
+
+  drawLine(series1, "#336485");
+  drawLine(series2, "#d97706");
+
+  const ageStep = Math.max(1, Math.round(ageRange / 4));
+  for (let age = pensionMinAge; age <= pensionMaxAge; age += ageStep) {
+    const x = margin.left + ((age - pensionMinAge) / ageRange) * plotWidth;
+    const label = svgEl("text", {
+      x,
+      y: height - margin.bottom + 24,
+      fill: "#7b8aa3",
+      "font-size": 12,
+      "text-anchor": "middle",
+    });
+    label.textContent = `${age}歳`;
+    p.chart.appendChild(label);
+  }
 }
 
 function updatePensionGraph(derived) {
   const { series1, series2 } = derived;
   const maxValue = Math.max(series1[series1.length - 1].value, series2[series2.length - 1].value, 1000000);
 
-  drawPensionAxis(maxValue);
-  drawPensionSeries(series1, "#336485", { maxValue, lineWidth: 3 });
-  drawPensionSeries(series2, "#d97706", { maxValue, lineWidth: 3 });
+  drawPensionChart(series1, series2, maxValue);
 }
 
 function renderPension() {
