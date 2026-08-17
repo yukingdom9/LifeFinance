@@ -61,6 +61,12 @@ function clamp(value, min, max) {
 // SVGチャート共通の描画パーツ（積立チャート・取崩チャートの両方で使用）
 // ---------------------------------------------------------------------
 
+// エリアグラフの塗り色。半透明にしてグリッド線が透けて見えるようにしつつ、
+// 白背景に乗せたときの見た目の色合いは元の #D2DDE9（不透明）と同じになるよう
+// 逆算した濃いめの色を、低い opacity で重ねている。
+const AREA_FILL_COLOR = "#4B77A7";
+const AREA_FILL_OPACITY = 0.25;
+
 // 背景と、グラフ本体の白いプロットエリアを描画する（svgの中身は毎回描き直すため一旦クリアする）。
 function drawChartFrame(svg, width, height, margin, plotWidth, plotHeight) {
   svg.innerHTML = "";
@@ -257,17 +263,26 @@ function drawAccumulateChart(balances, years) {
     return { x, y };
   });
 
-  const pathData = linePoints
+  // 取崩フェーズの資産残高エリアと同じ見た目（塗り＋薄い輪郭線のみ、太い線は引かない）にする。
+  const baselineY = margin.top + plotHeight;
+  const areaData = [
+    `M${linePoints[0].x.toFixed(2)} ${baselineY.toFixed(2)}`,
+    ...linePoints.map((p) => `L${p.x.toFixed(2)} ${p.y.toFixed(2)}`),
+    `L${linePoints[linePoints.length - 1].x.toFixed(2)} ${baselineY.toFixed(2)}`,
+    "Z",
+  ].join(" ");
+  a.chart.appendChild(svgEl("path", { d: areaData, fill: AREA_FILL_COLOR, opacity: AREA_FILL_OPACITY }));
+
+  const outlineData = linePoints
     .map((p, index) => `${index === 0 ? "M" : "L"}${p.x.toFixed(2)} ${p.y.toFixed(2)}`)
     .join(" ");
   a.chart.appendChild(
     svgEl("path", {
-      d: pathData,
+      d: outlineData,
       fill: "none",
-      stroke: "#336485",
-      "stroke-width": 3.5,
+      stroke: "#B7BEC2",
+      "stroke-width": 0.75,
       "stroke-linejoin": "round",
-      "stroke-linecap": "round",
     })
   );
 
@@ -499,7 +514,7 @@ function drawWithdrawChart(series) {
     `L${balancePoints[balancePoints.length - 1].x.toFixed(2)} ${baselineY.toFixed(2)}`,
     "Z",
   ].join(" ");
-  w.chart.appendChild(svgEl("path", { d: areaData, fill: "#D2DDE9", opacity: 0.85 }));
+  w.chart.appendChild(svgEl("path", { d: areaData, fill: AREA_FILL_COLOR, opacity: AREA_FILL_OPACITY }));
 
   const balanceOutlineData = balancePoints
     .map((p, index) => `${index === 0 ? "M" : "L"}${p.x.toFixed(2)} ${p.y.toFixed(2)}`)
