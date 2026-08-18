@@ -215,9 +215,31 @@ input[type="range"]:disabled {
   color: #1f2d3d;
 }
 
+.summary-grid-4 .summary-card p.amount-b {
+  color: #92400e;
+}
+
 .highlight-card {
   background: #eaf0fb;
   border-color: #cddaf4;
+}
+
+/* 取崩額の推移カード: 3行（10年後/20年後/30年後）を狭いカード内に収めるため小さめの文字にする */
+.trend-card h2 {
+  margin-bottom: 6px;
+}
+
+.trend-card p.trend-row {
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.6;
+  margin: 0;
+  color: #1f2d3d;
+}
+
+.trend-card .trend-row span {
+  font-weight: 700;
+  color: #1f4258;
 }
 
 .chart-panel {

@@ -2,6 +2,8 @@
 // 共通ユーティリティ
 // =====================================================================
 
+const byId = (id) => document.getElementById(id);
+
 function formatCurrency(value) {
   return new Intl.NumberFormat("ja-JP", {
     style: "currency",
@@ -36,10 +38,6 @@ function formatPrincipalAxis(value) {
   })}万円`;
 }
 
-function formatNumber(value) {
-  return value.toLocaleString("ja-JP");
-}
-
 function getNiceMax(value) {
   const magnitude = 10 ** Math.floor(Math.log10(Math.max(value, 1)));
   const normalized = value / magnitude;
@@ -58,8 +56,11 @@ function clamp(value, min, max) {
 }
 
 // ---------------------------------------------------------------------
-// SVGチャート共通の描画パーツ（積立チャート・取崩チャートの両方で使用）
+// SVGチャート共通の描画パーツ（積立チャート・取崩チャート・年金チャートの3つで使用）
 // ---------------------------------------------------------------------
+
+const CHART_WIDTH = 760;
+const CHART_HEIGHT = 420;
 
 // エリアグラフの塗り色。半透明にしてグリッド線が透けて見えるようにしつつ、
 // 白背景に乗せたときの見た目の色合いは元の #D2DDE9（不透明）と同じになるよう
@@ -105,11 +106,57 @@ function drawChartAxisLines(svg, width, height, margin) {
   );
 }
 
-// X軸下の「◯年」ラベルを、だいたい4〜5個になる間隔で描画する。
-function drawChartYearLabels(svg, { width, height, margin, plotWidth, maxYears }) {
-  const step = Math.max(1, Math.round(maxYears / 4));
-  for (let year = 0; year <= maxYears; year += step) {
-    const x = margin.left + (year / maxYears) * plotWidth;
+// 横方向のグリッド線＋左端のY軸ラベルを描画する（積立・取崩・年金の3チャート共通）。
+// ticksは常に [0, 0.25, 0.5, 0.75, 1] 割合の5点という前提。
+function drawHorizontalGridlines(
+  svg,
+  { ticks, margin, width, plotHeight, formatLabel, labelColor = "#7b8aa3", labelOffsetX = -12 }
+) {
+  ticks.forEach((tickValue, index) => {
+    const y = margin.top + plotHeight * (1 - index / 4);
+    svg.appendChild(
+      svgEl("line", {
+        x1: margin.left,
+        y1: y,
+        x2: width - margin.right,
+        y2: y,
+        stroke: "rgba(36,70,111,0.12)",
+      })
+    );
+    const label = svgEl("text", {
+      x: margin.left + labelOffsetX,
+      y: y + 4,
+      fill: labelColor,
+      "font-size": 12,
+      "text-anchor": "end",
+    });
+    label.textContent = formatLabel(tickValue);
+    svg.appendChild(label);
+  });
+}
+
+// 右側のY軸ラベルのみを描画する（取崩チャートの第2軸＝資産残高用。グリッド線は左軸のみでよい）。
+function drawRightAxisLabels(svg, { ticks, margin, width, plotHeight, formatLabel }) {
+  ticks.forEach((tickValue, index) => {
+    const y = margin.top + plotHeight * (1 - index / 4);
+    const label = svgEl("text", {
+      x: width - margin.right + 10,
+      y: y + 4,
+      fill: "#7b8aa3",
+      "font-size": 12,
+      "text-anchor": "start",
+    });
+    label.textContent = formatLabel(tickValue);
+    svg.appendChild(label);
+  });
+}
+
+// X軸下のラベル（「◯年」「◯歳」など）を、だいたい4〜5個になる間隔で描画する。
+function drawChartXAxisLabels(svg, { height, margin, plotWidth, minValue = 0, maxValue, suffix }) {
+  const range = maxValue - minValue;
+  const step = Math.max(1, Math.round(range / 4));
+  for (let value = minValue; value <= maxValue; value += step) {
+    const x = margin.left + ((value - minValue) / range) * plotWidth;
     const label = svgEl("text", {
       x,
       y: height - margin.bottom + 24,
@@ -117,76 +164,122 @@ function drawChartYearLabels(svg, { width, height, margin, plotWidth, maxYears }
       "font-size": 12,
       "text-anchor": "middle",
     });
-    label.textContent = `${year}年`;
+    label.textContent = `${value}${suffix}`;
     svg.appendChild(label);
   }
+}
+
+// 折れ線・輪郭線用のpath dataを組み立てる（"M x y L x y L x y ..."）。
+function buildPathData(points) {
+  return points
+    .map((point, index) => `${index === 0 ? "M" : "L"}${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
+    .join(" ");
+}
+
+// 塗りつぶしエリア（資産残高など）を、薄い輪郭線つきで描画する（積立・取崩チャート共通）。
+function drawFilledArea(svg, points, baselineY) {
+  const areaData = [
+    `M${points[0].x.toFixed(2)} ${baselineY.toFixed(2)}`,
+    ...points.map((point) => `L${point.x.toFixed(2)} ${point.y.toFixed(2)}`),
+    `L${points[points.length - 1].x.toFixed(2)} ${baselineY.toFixed(2)}`,
+    "Z",
+  ].join(" ");
+  svg.appendChild(svgEl("path", { d: areaData, fill: AREA_FILL_COLOR, opacity: AREA_FILL_OPACITY }));
+
+  svg.appendChild(
+    svgEl("path", {
+      d: buildPathData(points),
+      fill: "none",
+      stroke: "#B7BEC2",
+      "stroke-width": 0.75,
+      "stroke-linejoin": "round",
+    })
+  );
+}
+
+// 太めの折れ線（取崩額の推移、年金の運用累計など）を描画する。
+function drawLinePath(svg, points, stroke, strokeWidth) {
+  svg.appendChild(
+    svgEl("path", {
+      d: buildPathData(points),
+      fill: "none",
+      stroke,
+      "stroke-width": strokeWidth,
+      "stroke-linejoin": "round",
+      "stroke-linecap": "round",
+    })
+  );
 }
 
 // =====================================================================
 // DOM参照と、フェーズ間で共有する状態
 // =====================================================================
 
-const a = {
-  principal: document.getElementById("a-principal"),
-  monthly: document.getElementById("a-monthly"),
-  rate: document.getElementById("a-rate"),
-  years: document.getElementById("a-years"),
+const accumulateEls = {
+  principal: byId("a-principal"),
+  monthly: byId("a-monthly"),
+  rate: byId("a-rate"),
+  years: byId("a-years"),
 
-  principalValue: document.getElementById("a-principal-value"),
-  monthlyValue: document.getElementById("a-monthly-value"),
-  rateValue: document.getElementById("a-rate-value"),
-  yearsValue: document.getElementById("a-years-value"),
+  principalValue: byId("a-principal-value"),
+  monthlyValue: byId("a-monthly-value"),
+  rateValue: byId("a-rate-value"),
+  yearsValue: byId("a-years-value"),
 
-  finalBalance: document.getElementById("a-final-balance"),
-  totalContribution: document.getElementById("a-total-contribution"),
-  profit: document.getElementById("a-profit"),
-  chart: document.getElementById("accumulate-chart"),
+  finalBalance: byId("a-final-balance"),
+  totalContribution: byId("a-total-contribution"),
+  profit: byId("a-profit"),
+  chart: byId("accumulate-chart"),
 };
 
-const w = {
-  principal: document.getElementById("w-principal"),
-  rate: document.getElementById("w-rate"),
-  withdrawal: document.getElementById("w-withdrawal"),
-  fixedWithdrawal: document.getElementById("w-fixed-withdrawal"),
-  fixedInflation: document.getElementById("w-fixed-inflation"),
-  dynamicFixed: document.getElementById("w-dynamic-fixed"),
-  dynamicInflation: document.getElementById("w-dynamic-inflation"),
-  dynamicRate: document.getElementById("w-dynamic-rate"),
+const withdrawEls = {
+  principal: byId("w-principal"),
+  rate: byId("w-rate"),
+  withdrawal: byId("w-withdrawal"),
+  fixedWithdrawal: byId("w-fixed-withdrawal"),
+  fixedInflation: byId("w-fixed-inflation"),
+  dynamicFixed: byId("w-dynamic-fixed"),
+  dynamicInflation: byId("w-dynamic-inflation"),
+  dynamicRate: byId("w-dynamic-rate"),
 
-  principalValue: document.getElementById("w-principal-value"),
-  rateValue: document.getElementById("w-rate-value"),
-  withdrawalValue: document.getElementById("w-withdrawal-value"),
-  fixedWithdrawalValue: document.getElementById("w-fixed-withdrawal-value"),
-  fixedInflationValue: document.getElementById("w-fixed-inflation-value"),
-  dynamicFixedValue: document.getElementById("w-dynamic-fixed-value"),
-  dynamicInflationValue: document.getElementById("w-dynamic-inflation-value"),
-  dynamicRateValue: document.getElementById("w-dynamic-rate-value"),
+  principalValue: byId("w-principal-value"),
+  rateValue: byId("w-rate-value"),
+  withdrawalValue: byId("w-withdrawal-value"),
+  fixedWithdrawalValue: byId("w-fixed-withdrawal-value"),
+  fixedInflationValue: byId("w-fixed-inflation-value"),
+  dynamicFixedValue: byId("w-dynamic-fixed-value"),
+  dynamicInflationValue: byId("w-dynamic-inflation-value"),
+  dynamicRateValue: byId("w-dynamic-rate-value"),
 
-  finalBalance: document.getElementById("w-final-balance"),
-  withdrawalInitial: document.getElementById("w-withdrawal-initial"),
-  withdrawal20y: document.getElementById("w-withdrawal-20y"),
-  withdrawal40y: document.getElementById("w-withdrawal-40y"),
-  depletion: document.getElementById("w-depletion"),
-  chart: document.getElementById("withdraw-chart"),
+  finalBalance: byId("w-final-balance"),
+  withdrawalInitial: byId("w-withdrawal-initial"),
+  withdrawal10y: byId("w-withdrawal-10y"),
+  withdrawal20y: byId("w-withdrawal-20y"),
+  withdrawal30y: byId("w-withdrawal-30y"),
+  cumulative10y: byId("w-cumulative-10y"),
+  cumulative20y: byId("w-cumulative-20y"),
+  cumulative30y: byId("w-cumulative-30y"),
+  depletion: byId("w-depletion"),
+  chart: byId("withdraw-chart"),
 
-  rateModeControl: document.getElementById("rate-mode-control"),
-  fixedModeControl: document.getElementById("fixed-mode-control"),
-  dynamicModeControl: document.getElementById("dynamic-mode-control"),
-  card20y: document.getElementById("w-card-20y"),
-  card40y: document.getElementById("w-card-40y"),
-  cardDepletion: document.getElementById("w-card-depletion"),
+  rateModeControl: byId("rate-mode-control"),
+  fixedModeControl: byId("fixed-mode-control"),
+  dynamicModeControl: byId("dynamic-mode-control"),
+  cardTrend: byId("w-card-trend"),
+  cardCumulative: byId("w-card-cumulative"),
+  cardDepletion: byId("w-card-depletion"),
 };
 
-const modeRateBtn = document.getElementById("mode-rate-btn");
-const modeFixedBtn = document.getElementById("mode-fixed-btn");
-const modeDynamicBtn = document.getElementById("mode-dynamic-btn");
-const modeToggleIndicator = document.getElementById("mode-toggle-indicator");
-const totalWithdrawalLabel = document.getElementById("total-withdrawal-label");
+const modeRateBtn = byId("mode-rate-btn");
+const modeFixedBtn = byId("mode-fixed-btn");
+const modeDynamicBtn = byId("mode-dynamic-btn");
+const modeToggleIndicator = byId("mode-toggle-indicator");
+const totalWithdrawalLabel = byId("total-withdrawal-label");
 
-const linkToggle = document.getElementById("link-toggle");
-const linkedReadout = document.getElementById("linked-readout");
-const connectorFinalBalance = document.getElementById("connector-final-balance");
-const copyLinkBtn = document.getElementById("copyLinkBtn");
+const linkToggle = byId("link-toggle");
+const linkedReadout = byId("linked-readout");
+const connectorFinalBalance = byId("connector-final-balance");
+const copyLinkBtn = byId("copyLinkBtn");
 
 // 積立フェーズの最終残高（連携ONのときに取崩フェーズの元本として使われる）
 let latestFinalBalance = 0;
@@ -222,40 +315,22 @@ function getProjection(principal, monthly, annualRate, years) {
 }
 
 function drawAccumulateChart(balances, years) {
-  const width = 760;
-  const height = 420;
   const margin = { top: 24, right: 24, bottom: 48, left: 84 };
-  const plotWidth = width - margin.left - margin.right;
-  const plotHeight = height - margin.top - margin.bottom;
+  const plotWidth = CHART_WIDTH - margin.left - margin.right;
+  const plotHeight = CHART_HEIGHT - margin.top - margin.bottom;
 
   const maxValue = getNiceMax(Math.max(...balances, 1) * 1.1);
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((t) => maxValue * t);
 
-  drawChartFrame(a.chart, width, height, margin, plotWidth, plotHeight);
-
-  ticks.forEach((tickValue, index) => {
-    const y = margin.top + plotHeight * (1 - index / 4);
-    a.chart.appendChild(
-      svgEl("line", {
-        x1: margin.left,
-        y1: y,
-        x2: width - margin.right,
-        y2: y,
-        stroke: "rgba(36,70,111,0.12)",
-      })
-    );
-    const label = svgEl("text", {
-      x: margin.left - 12,
-      y: y + 4,
-      fill: "#7b8aa3",
-      "font-size": 12,
-      "text-anchor": "end",
-    });
-    label.textContent = formatPrincipalAxis(tickValue);
-    a.chart.appendChild(label);
+  drawChartFrame(accumulateEls.chart, CHART_WIDTH, CHART_HEIGHT, margin, plotWidth, plotHeight);
+  drawHorizontalGridlines(accumulateEls.chart, {
+    ticks,
+    margin,
+    width: CHART_WIDTH,
+    plotHeight,
+    formatLabel: formatPrincipalAxis,
   });
-
-  drawChartAxisLines(a.chart, width, height, margin);
+  drawChartAxisLines(accumulateEls.chart, CHART_WIDTH, CHART_HEIGHT, margin);
 
   const linePoints = balances.map((value, index) => {
     const x = margin.left + (index / (balances.length - 1)) * plotWidth;
@@ -265,46 +340,27 @@ function drawAccumulateChart(balances, years) {
 
   // 取崩フェーズの資産残高エリアと同じ見た目（塗り＋薄い輪郭線のみ、太い線は引かない）にする。
   const baselineY = margin.top + plotHeight;
-  const areaData = [
-    `M${linePoints[0].x.toFixed(2)} ${baselineY.toFixed(2)}`,
-    ...linePoints.map((p) => `L${p.x.toFixed(2)} ${p.y.toFixed(2)}`),
-    `L${linePoints[linePoints.length - 1].x.toFixed(2)} ${baselineY.toFixed(2)}`,
-    "Z",
-  ].join(" ");
-  a.chart.appendChild(svgEl("path", { d: areaData, fill: AREA_FILL_COLOR, opacity: AREA_FILL_OPACITY }));
+  drawFilledArea(accumulateEls.chart, linePoints, baselineY);
 
-  const outlineData = linePoints
-    .map((p, index) => `${index === 0 ? "M" : "L"}${p.x.toFixed(2)} ${p.y.toFixed(2)}`)
-    .join(" ");
-  a.chart.appendChild(
-    svgEl("path", {
-      d: outlineData,
-      fill: "none",
-      stroke: "#B7BEC2",
-      "stroke-width": 0.75,
-      "stroke-linejoin": "round",
-    })
-  );
-
-  drawChartYearLabels(a.chart, { width, height, margin, plotWidth, maxYears: years });
+  drawChartXAxisLabels(accumulateEls.chart, { height: CHART_HEIGHT, margin, plotWidth, maxValue: years, suffix: "年" });
 }
 
 function renderAccumulate() {
-  const principal = Number(a.principal.value);
-  const monthly = Number(a.monthly.value);
-  const annualRate = Number(a.rate.value);
-  const years = Number(a.years.value);
+  const principal = Number(accumulateEls.principal.value);
+  const monthly = Number(accumulateEls.monthly.value);
+  const annualRate = Number(accumulateEls.rate.value);
+  const years = Number(accumulateEls.years.value);
 
-  a.principalValue.value = formatCurrency(principal);
-  a.monthlyValue.value = formatCurrency(monthly);
-  a.rateValue.value = formatPercent(annualRate);
-  a.yearsValue.value = `${years}年`;
+  accumulateEls.principalValue.value = formatCurrency(principal);
+  accumulateEls.monthlyValue.value = formatCurrency(monthly);
+  accumulateEls.rateValue.value = formatPercent(annualRate);
+  accumulateEls.yearsValue.value = `${years}年`;
 
   const projection = getProjection(principal, monthly, annualRate, years);
 
-  a.finalBalance.textContent = formatCurrency(projection.finalBalance);
-  a.totalContribution.textContent = formatCurrency(projection.totalContribution);
-  a.profit.textContent = formatCurrency(projection.profit);
+  accumulateEls.finalBalance.textContent = formatCurrency(projection.finalBalance);
+  accumulateEls.totalContribution.textContent = formatCurrency(projection.totalContribution);
+  accumulateEls.profit.textContent = formatCurrency(projection.profit);
 
   drawAccumulateChart(projection.balances, years);
 
@@ -318,7 +374,7 @@ function renderAccumulate() {
   syncShareUrl();
 }
 
-[a.principal, a.monthly, a.rate, a.years].forEach((input) => {
+[accumulateEls.principal, accumulateEls.monthly, accumulateEls.rate, accumulateEls.years].forEach((input) => {
   input.addEventListener("input", renderAccumulate);
 });
 
@@ -406,100 +462,80 @@ function buildDynamicWithdrawalSeries(principal, annualRate, fixedWithdrawal, in
 const withdrawalModeConfigs = {
   rate: {
     button: modeRateBtn,
-    control: w.rateModeControl,
+    control: withdrawEls.rateModeControl,
     totalLabel: "毎月の取崩額（定率取崩）",
-    showTrendCards: true, // 取崩額が変動するため、20年後/40年後の推移カードを表示
+    showTrendCards: true, // 取崩額が変動するため、10年後/20年後/30年後の推移カードを表示
     showDepletionCard: false,
     compute(principal, annualRate) {
-      const withdrawalRate = Number(w.withdrawal.value);
-      w.withdrawalValue.value = formatPercent(withdrawalRate);
+      const withdrawalRate = Number(withdrawEls.withdrawal.value);
+      withdrawEls.withdrawalValue.value = formatPercent(withdrawalRate);
       return buildWithdrawalSeries(principal, annualRate, withdrawalRate);
     },
   },
   fixed: {
     button: modeFixedBtn,
-    control: w.fixedModeControl,
+    control: withdrawEls.fixedModeControl,
     totalLabel: "毎月の取崩額（定額取崩）",
-    showTrendCards: true, // 定率取崩と同じ4項目（毎月/20年後/40年後/最終残高）で表示を揃える
+    showTrendCards: true, // 定率取崩と同じ3項目（毎月/推移/最終残高）で表示を揃える
     showDepletionCard: false,
     compute(principal, annualRate) {
-      const monthlyWithdrawal = Number(w.fixedWithdrawal.value);
-      const inflationRate = Number(w.fixedInflation.value);
-      w.fixedWithdrawalValue.value = formatCurrency(monthlyWithdrawal);
-      w.fixedInflationValue.value = formatPercent(inflationRate);
+      const monthlyWithdrawal = Number(withdrawEls.fixedWithdrawal.value);
+      const inflationRate = Number(withdrawEls.fixedInflation.value);
+      withdrawEls.fixedWithdrawalValue.value = formatCurrency(monthlyWithdrawal);
+      withdrawEls.fixedInflationValue.value = formatPercent(inflationRate);
       return buildFixedWithdrawalSeries(principal, annualRate, monthlyWithdrawal, inflationRate);
     },
   },
   dynamic: {
     button: modeDynamicBtn,
-    control: w.dynamicModeControl,
+    control: withdrawEls.dynamicModeControl,
     totalLabel: "毎月の取崩額（動的取崩）",
-    // 定率取崩と同じ4項目（毎月/20年後/40年後/最終残高）で表示を揃える
+    // 定率取崩と同じ3項目（毎月/推移/最終残高）で表示を揃える
     showTrendCards: true,
     showDepletionCard: false,
     compute(principal, annualRate) {
-      const fixedWithdrawal = Number(w.dynamicFixed.value);
-      const inflationRate = Number(w.dynamicInflation.value);
-      const surplusRate = Number(w.dynamicRate.value);
-      w.dynamicFixedValue.value = formatCurrency(fixedWithdrawal);
-      w.dynamicInflationValue.value = formatPercent(inflationRate);
-      w.dynamicRateValue.value = formatPercent(surplusRate);
+      const fixedWithdrawal = Number(withdrawEls.dynamicFixed.value);
+      const inflationRate = Number(withdrawEls.dynamicInflation.value);
+      const surplusRate = Number(withdrawEls.dynamicRate.value);
+      withdrawEls.dynamicFixedValue.value = formatCurrency(fixedWithdrawal);
+      withdrawEls.dynamicInflationValue.value = formatPercent(inflationRate);
+      withdrawEls.dynamicRateValue.value = formatPercent(surplusRate);
       return buildDynamicWithdrawalSeries(principal, annualRate, fixedWithdrawal, inflationRate, surplusRate);
     },
   },
 };
 
 function drawWithdrawChart(series) {
-  const width = 760;
-  const height = 420;
   const margin = { top: 24, right: 80, bottom: 48, left: 72 };
-  const plotWidth = width - margin.left - margin.right;
-  const plotHeight = height - margin.top - margin.bottom;
+  const plotWidth = CHART_WIDTH - margin.left - margin.right;
+  const plotHeight = CHART_HEIGHT - margin.top - margin.bottom;
   const months = series.bars.length;
 
   const maxLeft = getNiceMax(Math.max(...series.bars, 1) * 1.1);
-  const maxRight = getNiceMax(Math.max(...series.points.map((p) => p.y), 1) * 1.1);
+  const maxRight = getNiceMax(Math.max(...series.points.map((point) => point.y), 1) * 1.1);
   const leftTicks = [0, 0.25, 0.5, 0.75, 1].map((t) => maxLeft * t);
   const rightTicks = [0, 0.25, 0.5, 0.75, 1].map((t) => maxRight * t);
 
-  drawChartFrame(w.chart, width, height, margin, plotWidth, plotHeight);
+  drawChartFrame(withdrawEls.chart, CHART_WIDTH, CHART_HEIGHT, margin, plotWidth, plotHeight);
 
-  leftTicks.forEach((tickValue, index) => {
-    const y = margin.top + plotHeight * (1 - index / 4);
-    w.chart.appendChild(
-      svgEl("line", {
-        x1: margin.left,
-        y1: y,
-        x2: width - margin.right,
-        y2: y,
-        stroke: "rgba(36,70,111,0.12)",
-      })
-    );
-    const label = svgEl("text", {
-      x: margin.left - 10,
-      y: y + 4,
-      fill: "#336485",
-      "font-size": 12,
-      "text-anchor": "end",
-    });
-    label.textContent = formatWithdrawAxis(tickValue);
-    w.chart.appendChild(label);
+  drawHorizontalGridlines(withdrawEls.chart, {
+    ticks: leftTicks,
+    margin,
+    width: CHART_WIDTH,
+    plotHeight,
+    formatLabel: formatWithdrawAxis,
+    labelColor: "#336485",
+    labelOffsetX: -10,
+  });
+  drawRightAxisLabels(withdrawEls.chart, {
+    ticks: rightTicks,
+    margin,
+    width: CHART_WIDTH,
+    plotHeight,
+    formatLabel: formatPrincipalAxis,
   });
 
-  rightTicks.forEach((tickValue, index) => {
-    const y = margin.top + plotHeight * (1 - index / 4);
-    const label = svgEl("text", {
-      x: width - margin.right + 10,
-      y: y + 4,
-      fill: "#7b8aa3",
-      "font-size": 12,
-      "text-anchor": "start",
-    });
-    label.textContent = formatPrincipalAxis(tickValue);
-    w.chart.appendChild(label);
-  });
-
-  drawChartAxisLines(w.chart, width, height, margin);
+  drawChartAxisLines(withdrawEls.chart, CHART_WIDTH, CHART_HEIGHT, margin);
 
   const baselineY = margin.top + plotHeight;
   const balancePoints = series.points.map((point) => {
@@ -507,106 +543,109 @@ function drawWithdrawChart(series) {
     const y = margin.top + plotHeight * (1 - Math.max(0, point.y) / maxRight);
     return { x, y };
   });
-
-  const areaData = [
-    `M${balancePoints[0].x.toFixed(2)} ${baselineY.toFixed(2)}`,
-    ...balancePoints.map((p) => `L${p.x.toFixed(2)} ${p.y.toFixed(2)}`),
-    `L${balancePoints[balancePoints.length - 1].x.toFixed(2)} ${baselineY.toFixed(2)}`,
-    "Z",
-  ].join(" ");
-  w.chart.appendChild(svgEl("path", { d: areaData, fill: AREA_FILL_COLOR, opacity: AREA_FILL_OPACITY }));
-
-  const balanceOutlineData = balancePoints
-    .map((p, index) => `${index === 0 ? "M" : "L"}${p.x.toFixed(2)} ${p.y.toFixed(2)}`)
-    .join(" ");
-  w.chart.appendChild(
-    svgEl("path", {
-      d: balanceOutlineData,
-      fill: "none",
-      stroke: "#B7BEC2",
-      "stroke-width": 0.75,
-      "stroke-linejoin": "round",
-    })
-  );
+  drawFilledArea(withdrawEls.chart, balancePoints, baselineY);
 
   const withdrawalLinePoints = series.bars.map((value, index) => {
     const x = margin.left + (index / months) * plotWidth;
     const y = margin.top + plotHeight * (1 - Math.max(0, Math.min(maxLeft, value)) / maxLeft);
     return { x, y };
   });
-  const pathData = withdrawalLinePoints
-    .map((p, index) => `${index === 0 ? "M" : "L"}${p.x.toFixed(2)} ${p.y.toFixed(2)}`)
-    .join(" ");
-  w.chart.appendChild(
-    svgEl("path", {
-      d: pathData,
-      fill: "none",
-      stroke: "#336485",
-      "stroke-width": 3.5,
-      "stroke-linejoin": "round",
-      "stroke-linecap": "round",
-    })
-  );
+  drawLinePath(withdrawEls.chart, withdrawalLinePoints, "#d97706", 3.5);
 
-  drawChartYearLabels(w.chart, { width, height, margin, plotWidth, maxYears: 40 });
+  drawChartXAxisLabels(withdrawEls.chart, { height: CHART_HEIGHT, margin, plotWidth, maxValue: 40, suffix: "年" });
 }
 
-function renderWithdraw() {
-  const principal = isLinked ? latestFinalBalance : Number(w.principal.value);
-  const annualRate = Number(w.rate.value);
+// 「資産が尽きる時期」カードの表示文言を組み立てる。
+function formatDepletionText(depletionMonth) {
+  if (depletionMonth == null) {
+    return "40年以内に枯渇なし";
+  }
+  const years = Math.floor(depletionMonth / 12);
+  const months = depletionMonth % 12;
+  return `${years}年${months}か月`;
+}
 
-  w.principalValue.value = formatCurrency(principal);
-  w.rateValue.value = formatPercent(annualRate);
+// 「取崩額の推移」カード: 10年後/20年後/30年後の毎月の取崩額（単月の額）を表示する。
+function updateWithdrawTrendCards(bars) {
+  withdrawEls.withdrawal10y.textContent = formatCurrency(bars[10 * 12 - 1] ?? 0);
+  withdrawEls.withdrawal20y.textContent = formatCurrency(bars[20 * 12 - 1] ?? 0);
+  withdrawEls.withdrawal30y.textContent = formatCurrency(bars[30 * 12 - 1] ?? 0);
+}
 
-  const activeConfig = withdrawalModeConfigs[withdrawalMode];
-  const { points, bars, depletionMonth } = activeConfig.compute(principal, annualRate);
+// 累計和の配列を1回のループで作る（10年後/20年後/30年後をそれぞれ0から合計し直さないための最適化）。
+// bars.slice(0, n).reduce((t, v) => t + v, 0) を3回行うのと、加算の順序・結果は完全に同じ。
+function buildCumulativeSums(values) {
+  const cumulative = [];
+  let runningTotal = 0;
+  for (let i = 0; i < values.length; i += 1) {
+    runningTotal += values[i];
+    cumulative.push(runningTotal);
+  }
+  return cumulative;
+}
+
+// 「累計取崩額」カード: 開始から10年後/20年後/30年後までに取り崩した額の合計を表示する。
+function updateWithdrawCumulativeCards(bars) {
+  const cumulativeBars = buildCumulativeSums(bars);
+  withdrawEls.cumulative10y.textContent = formatCurrency(cumulativeBars[10 * 12 - 1] ?? 0);
+  withdrawEls.cumulative20y.textContent = formatCurrency(cumulativeBars[20 * 12 - 1] ?? 0);
+  withdrawEls.cumulative30y.textContent = formatCurrency(cumulativeBars[30 * 12 - 1] ?? 0);
+}
+
+function updateWithdrawSummaryCards(activeConfig, { points, bars, depletionMonth }) {
   const finalBalance = points[points.length - 1].y;
-  w.finalBalance.textContent = formatCurrency(finalBalance);
+  withdrawEls.finalBalance.textContent = formatCurrency(finalBalance);
 
   latestWithdrawalInitial = bars[0] ?? 0;
-  w.withdrawalInitial.textContent = formatCurrency(latestWithdrawalInitial);
+  withdrawEls.withdrawalInitial.textContent = formatCurrency(latestWithdrawalInitial);
 
   if (activeConfig.showDepletionCard) {
-    if (depletionMonth == null) {
-      w.depletion.textContent = "40年以内に枯渇なし";
-    } else {
-      const years = Math.floor(depletionMonth / 12);
-      const months = depletionMonth % 12;
-      w.depletion.textContent = `${years}年${months}か月`;
-    }
+    withdrawEls.depletion.textContent = formatDepletionText(depletionMonth);
   }
 
   if (activeConfig.showTrendCards) {
-    w.withdrawal20y.textContent = formatCurrency(bars[20 * 12 - 1] ?? 0);
-    w.withdrawal40y.textContent = formatCurrency(bars[bars.length - 1] ?? 0);
+    updateWithdrawTrendCards(bars);
+    updateWithdrawCumulativeCards(bars);
   }
+}
 
-  drawWithdrawChart({ points, bars });
+function renderWithdraw() {
+  const principal = isLinked ? latestFinalBalance : Number(withdrawEls.principal.value);
+  const annualRate = Number(withdrawEls.rate.value);
+
+  withdrawEls.principalValue.value = formatCurrency(principal);
+  withdrawEls.rateValue.value = formatPercent(annualRate);
+
+  const activeConfig = withdrawalModeConfigs[withdrawalMode];
+  const series = activeConfig.compute(principal, annualRate);
+
+  updateWithdrawSummaryCards(activeConfig, series);
+  drawWithdrawChart(series);
 
   renderTotal();
   syncShareUrl();
 }
 
 [
-  w.rate,
-  w.withdrawal,
-  w.fixedWithdrawal,
-  w.dynamicFixed,
-  w.dynamicRate,
+  withdrawEls.rate,
+  withdrawEls.withdrawal,
+  withdrawEls.fixedWithdrawal,
+  withdrawEls.dynamicFixed,
+  withdrawEls.dynamicRate,
 ].forEach((input) => {
   input.addEventListener("input", renderWithdraw);
 });
 
 // 定額取崩・動的取崩の想定インフレ率は同じ前提を共有するため、一方を動かすともう一方も連動する
-[w.fixedInflation, w.dynamicInflation].forEach((input) => {
+[withdrawEls.fixedInflation, withdrawEls.dynamicInflation].forEach((input) => {
   input.addEventListener("input", () => {
-    w.fixedInflation.value = input.value;
-    w.dynamicInflation.value = input.value;
+    withdrawEls.fixedInflation.value = input.value;
+    withdrawEls.dynamicInflation.value = input.value;
     renderWithdraw();
   });
 });
 
-w.principal.addEventListener("input", () => {
+withdrawEls.principal.addEventListener("input", () => {
   if (!isLinked) {
     renderWithdraw();
   }
@@ -648,9 +687,9 @@ function setWithdrawalMode(mode, options = {}) {
   positionModeToggleIndicator(instant);
 
   const activeConfig = withdrawalModeConfigs[mode];
-  w.card20y.classList.toggle("hidden", !activeConfig.showTrendCards);
-  w.card40y.classList.toggle("hidden", !activeConfig.showTrendCards);
-  w.cardDepletion.classList.toggle("hidden", !activeConfig.showDepletionCard);
+  withdrawEls.cardTrend.classList.toggle("hidden", !activeConfig.showTrendCards);
+  withdrawEls.cardCumulative.classList.toggle("hidden", !activeConfig.showTrendCards);
+  withdrawEls.cardDepletion.classList.toggle("hidden", !activeConfig.showDepletionCard);
 
   totalWithdrawalLabel.textContent = activeConfig.totalLabel;
 
@@ -667,17 +706,17 @@ window.addEventListener("resize", () => positionModeToggleIndicator(true));
 // =====================================================================
 
 function syncLinkedPrincipal() {
-  const min = Number(w.principal.min);
-  const max = Number(w.principal.max);
+  const min = Number(withdrawEls.principal.min);
+  const max = Number(withdrawEls.principal.max);
   // スライダーのつまみ位置は表示上の目安として範囲内にクランプするが、
   // 実際の計算には latestFinalBalance をそのまま使用する。
-  w.principal.value = Math.min(Math.max(latestFinalBalance, min), max);
+  withdrawEls.principal.value = Math.min(Math.max(latestFinalBalance, min), max);
   renderWithdraw();
 }
 
 function setLinked(linked) {
   isLinked = linked;
-  w.principal.disabled = linked;
+  withdrawEls.principal.disabled = linked;
   linkedReadout.classList.toggle("active", linked);
 
   if (linked) {
@@ -704,26 +743,26 @@ const pensionDefaults = {
 
 const pensionState = { ...pensionDefaults };
 
-const p = {
-  avgIncome: document.getElementById("p-avgIncome"),
-  yearsNational: document.getElementById("p-yearsNational"),
-  yearsKosei: document.getElementById("p-yearsKosei"),
-  startAge1: document.getElementById("p-startAge1"),
-  startAge2: document.getElementById("p-startAge2"),
-  returnRate: document.getElementById("p-returnRate"),
-  avgIncomeValue: document.getElementById("p-avgIncomeValue"),
-  yearsNationalValue: document.getElementById("p-yearsNationalValue"),
-  yearsKoseiValue: document.getElementById("p-yearsKoseiValue"),
-  startAge1Value: document.getElementById("p-startAge1Value"),
-  startAge2Value: document.getElementById("p-startAge2Value"),
-  returnRateValue: document.getElementById("p-returnRateValue"),
-  monthly1Age: document.getElementById("p-monthly1Age"),
-  monthly2Age: document.getElementById("p-monthly2Age"),
-  monthly1: document.getElementById("p-monthly1"),
-  monthly2: document.getElementById("p-monthly2"),
-  breakevenText: document.getElementById("p-breakevenText"),
-  investmentText: document.getElementById("p-investmentText"),
-  chart: document.getElementById("pension-chart"),
+const pensionEls = {
+  avgIncome: byId("p-avgIncome"),
+  yearsNational: byId("p-yearsNational"),
+  yearsKosei: byId("p-yearsKosei"),
+  startAge1: byId("p-startAge1"),
+  startAge2: byId("p-startAge2"),
+  returnRate: byId("p-returnRate"),
+  avgIncomeValue: byId("p-avgIncomeValue"),
+  yearsNationalValue: byId("p-yearsNationalValue"),
+  yearsKoseiValue: byId("p-yearsKoseiValue"),
+  startAge1Value: byId("p-startAge1Value"),
+  startAge2Value: byId("p-startAge2Value"),
+  returnRateValue: byId("p-returnRateValue"),
+  monthly1Age: byId("p-monthly1Age"),
+  monthly2Age: byId("p-monthly2Age"),
+  monthly1: byId("p-monthly1"),
+  monthly2: byId("p-monthly2"),
+  breakevenText: byId("p-breakevenText"),
+  investmentText: byId("p-investmentText"),
+  chart: byId("pension-chart"),
 };
 
 const pensionMinAge = 60;
@@ -733,19 +772,19 @@ const pensionMaxAge = 100;
 let latestPensionMonthly2 = 0;
 
 function updatePensionInputs() {
-  p.avgIncome.value = pensionState.avgIncome;
-  p.yearsNational.value = pensionState.yearsNational;
-  p.yearsKosei.value = pensionState.yearsKosei;
-  p.startAge1.value = pensionState.startAge1;
-  p.startAge2.value = pensionState.startAge2;
-  p.returnRate.value = pensionState.returnRate;
+  pensionEls.avgIncome.value = pensionState.avgIncome;
+  pensionEls.yearsNational.value = pensionState.yearsNational;
+  pensionEls.yearsKosei.value = pensionState.yearsKosei;
+  pensionEls.startAge1.value = pensionState.startAge1;
+  pensionEls.startAge2.value = pensionState.startAge2;
+  pensionEls.returnRate.value = pensionState.returnRate;
 
-  p.avgIncomeValue.textContent = formatCurrency(pensionState.avgIncome);
-  p.yearsNationalValue.textContent = pensionState.yearsNational;
-  p.yearsKoseiValue.textContent = pensionState.yearsKosei;
-  p.startAge1Value.textContent = pensionState.startAge1;
-  p.startAge2Value.textContent = pensionState.startAge2;
-  p.returnRateValue.textContent = Number(pensionState.returnRate).toFixed(1);
+  pensionEls.avgIncomeValue.textContent = formatCurrency(pensionState.avgIncome);
+  pensionEls.yearsNationalValue.textContent = pensionState.yearsNational;
+  pensionEls.yearsKoseiValue.textContent = pensionState.yearsKosei;
+  pensionEls.startAge1Value.textContent = pensionState.startAge1;
+  pensionEls.startAge2Value.textContent = pensionState.startAge2;
+  pensionEls.returnRateValue.textContent = Number(pensionState.returnRate).toFixed(1);
 }
 
 function computeMonthlyPension(age) {
@@ -816,19 +855,19 @@ function computePensionDerived() {
 function updatePensionResults(derived) {
   const { monthly1, monthly2, series1, series2, breakevenAge } = derived;
 
-  p.monthly1Age.textContent = `${pensionState.startAge1}歳`;
-  p.monthly2Age.textContent = `${pensionState.startAge2}歳`;
-  p.monthly1.textContent = formatCurrency(monthly1);
-  p.monthly2.textContent = formatCurrency(monthly2);
+  pensionEls.monthly1Age.textContent = `${pensionState.startAge1}歳`;
+  pensionEls.monthly2Age.textContent = `${pensionState.startAge2}歳`;
+  pensionEls.monthly1.textContent = formatCurrency(monthly1);
+  pensionEls.monthly2.textContent = formatCurrency(monthly2);
 
-  p.breakevenText.textContent =
+  pensionEls.breakevenText.textContent =
     breakevenAge !== null
       ? `受給総額の損益分岐点はおよそ ${Math.round(breakevenAge)} 歳です。`
       : `${pensionMaxAge}歳までに損益分岐点が到達しませんでした。`;
 
   const totalAtMaxAge1 = Math.round(series1[series1.length - 1].value);
   const totalAtMaxAge2 = Math.round(series2[series2.length - 1].value);
-  p.investmentText.textContent = `${pensionState.startAge1}歳開始の${pensionMaxAge}歳時点の運用累計は約 ${formatCurrency(
+  pensionEls.investmentText.textContent = `${pensionState.startAge1}歳開始の${pensionMaxAge}歳時点の運用累計は約 ${formatCurrency(
     totalAtMaxAge1
   )}、${pensionState.startAge2}歳開始は約 ${formatCurrency(totalAtMaxAge2)}です。`;
 }
@@ -847,76 +886,41 @@ function formatPensionAxisValue(value) {
 // 積立投資チャート（drawAccumulateChart）と同じ基本構造
 // （白いプロットエリア＋横方向のグリッド線のみ、縦線なし）で描画する。
 function drawPensionChart(series1, series2, maxValue) {
-  const width = 760;
-  const height = 420;
   const margin = { top: 24, right: 24, bottom: 48, left: 84 };
-  const plotWidth = width - margin.left - margin.right;
-  const plotHeight = height - margin.top - margin.bottom;
+  const plotWidth = CHART_WIDTH - margin.left - margin.right;
+  const plotHeight = CHART_HEIGHT - margin.top - margin.bottom;
 
-  drawChartFrame(p.chart, width, height, margin, plotWidth, plotHeight);
+  drawChartFrame(pensionEls.chart, CHART_WIDTH, CHART_HEIGHT, margin, plotWidth, plotHeight);
 
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((t) => maxValue * t);
-  ticks.forEach((tickValue, index) => {
-    const y = margin.top + plotHeight * (1 - index / 4);
-    p.chart.appendChild(
-      svgEl("line", {
-        x1: margin.left,
-        y1: y,
-        x2: width - margin.right,
-        y2: y,
-        stroke: "rgba(36,70,111,0.12)",
-      })
-    );
-    const label = svgEl("text", {
-      x: margin.left - 12,
-      y: y + 4,
-      fill: "#7b8aa3",
-      "font-size": 12,
-      "text-anchor": "end",
-    });
-    label.textContent = formatPensionAxisValue(tickValue);
-    p.chart.appendChild(label);
+  drawHorizontalGridlines(pensionEls.chart, {
+    ticks,
+    margin,
+    width: CHART_WIDTH,
+    plotHeight,
+    formatLabel: formatPensionAxisValue,
   });
 
-  drawChartAxisLines(p.chart, width, height, margin);
+  drawChartAxisLines(pensionEls.chart, CHART_WIDTH, CHART_HEIGHT, margin);
 
   const ageRange = pensionMaxAge - pensionMinAge;
-  const drawLine = (series, color) => {
-    const pathData = series
-      .map((point, index) => {
-        const x = margin.left + ((point.age - pensionMinAge) / ageRange) * plotWidth;
-        const y = margin.top + plotHeight * (1 - Math.max(0, point.value) / maxValue);
-        return `${index === 0 ? "M" : "L"}${x.toFixed(2)} ${y.toFixed(2)}`;
-      })
-      .join(" ");
-    p.chart.appendChild(
-      svgEl("path", {
-        d: pathData,
-        fill: "none",
-        stroke: color,
-        "stroke-width": 3,
-        "stroke-linejoin": "round",
-        "stroke-linecap": "round",
-      })
-    );
-  };
+  const toPlotPoints = (series) =>
+    series.map((point) => ({
+      x: margin.left + ((point.age - pensionMinAge) / ageRange) * plotWidth,
+      y: margin.top + plotHeight * (1 - Math.max(0, point.value) / maxValue),
+    }));
 
-  drawLine(series1, "#336485");
-  drawLine(series2, "#d97706");
+  drawLinePath(pensionEls.chart, toPlotPoints(series1), "#336485", 3);
+  drawLinePath(pensionEls.chart, toPlotPoints(series2), "#d97706", 3);
 
-  const ageStep = Math.max(1, Math.round(ageRange / 4));
-  for (let age = pensionMinAge; age <= pensionMaxAge; age += ageStep) {
-    const x = margin.left + ((age - pensionMinAge) / ageRange) * plotWidth;
-    const label = svgEl("text", {
-      x,
-      y: height - margin.bottom + 24,
-      fill: "#7b8aa3",
-      "font-size": 12,
-      "text-anchor": "middle",
-    });
-    label.textContent = `${age}歳`;
-    p.chart.appendChild(label);
-  }
+  drawChartXAxisLabels(pensionEls.chart, {
+    height: CHART_HEIGHT,
+    margin,
+    plotWidth,
+    minValue: pensionMinAge,
+    maxValue: pensionMaxAge,
+    suffix: "歳",
+  });
 }
 
 function updatePensionGraph(derived) {
@@ -944,7 +948,14 @@ function handlePensionInputChange(event) {
   renderPension();
 }
 
-[p.avgIncome, p.yearsNational, p.yearsKosei, p.startAge1, p.startAge2, p.returnRate].forEach((input) => {
+[
+  pensionEls.avgIncome,
+  pensionEls.yearsNational,
+  pensionEls.yearsKosei,
+  pensionEls.startAge1,
+  pensionEls.startAge2,
+  pensionEls.returnRate,
+].forEach((input) => {
   input.addEventListener("input", handlePensionInputChange);
   input.addEventListener("change", handlePensionInputChange);
 });
@@ -953,10 +964,10 @@ function handlePensionInputChange(event) {
 // Stage 4: 統合結果（取崩フェーズの毎月の取崩額 + 年金月額②）
 // =====================================================================
 
-const totalWithdrawalEl = document.getElementById("total-withdrawal");
-const totalPensionEl = document.getElementById("total-pension");
-const totalPensionAgeEl = document.getElementById("total-pension-age");
-const totalResultEl = document.getElementById("total-result");
+const totalWithdrawalEl = byId("total-withdrawal");
+const totalPensionEl = byId("total-pension");
+const totalPensionAgeEl = byId("total-pension-age");
+const totalResultEl = byId("total-result");
 
 function renderTotal() {
   const total = latestWithdrawalInitial + latestPensionMonthly2;
@@ -975,18 +986,18 @@ function renderTotal() {
 // 新しいスライダーを共有リンク対応にしたいときは、ここに1行足すだけでよい
 // （parse / apply / sync すべてにこの一覧が使われるため、更新漏れが起きない）。
 const shareSliderFields = [
-  { param: "principal", input: a.principal },
-  { param: "monthly", input: a.monthly },
-  { param: "rate", input: a.rate },
-  { param: "years", input: a.years },
-  { param: "wprincipal", input: w.principal },
-  { param: "wrate", input: w.rate },
-  { param: "wwithdrawal", input: w.withdrawal },
-  { param: "wfixedwithdrawal", input: w.fixedWithdrawal },
+  { param: "principal", input: accumulateEls.principal },
+  { param: "monthly", input: accumulateEls.monthly },
+  { param: "rate", input: accumulateEls.rate },
+  { param: "years", input: accumulateEls.years },
+  { param: "wprincipal", input: withdrawEls.principal },
+  { param: "wrate", input: withdrawEls.rate },
+  { param: "wwithdrawal", input: withdrawEls.withdrawal },
+  { param: "wfixedwithdrawal", input: withdrawEls.fixedWithdrawal },
   // 想定インフレ率は定額取崩・動的取崩で連動するため、URLパラメータは1つに集約する
-  { param: "wfixedinflation", input: w.fixedInflation },
-  { param: "wdynamicfixed", input: w.dynamicFixed },
-  { param: "wdynamicrate", input: w.dynamicRate },
+  { param: "wfixedinflation", input: withdrawEls.fixedInflation },
+  { param: "wdynamicfixed", input: withdrawEls.dynamicFixed },
+  { param: "wdynamicrate", input: withdrawEls.dynamicRate },
 ];
 
 function parseQueryState() {
@@ -1024,7 +1035,7 @@ function applyParsedState(parsed) {
     input.value = parsed.sliderValues[param];
   });
   // 想定インフレ率（動的取崩）はURLに保存していないため、定額取崩側の値から復元する
-  w.dynamicInflation.value = w.fixedInflation.value;
+  withdrawEls.dynamicInflation.value = withdrawEls.fixedInflation.value;
   withdrawalMode = parsed.wMode;
   linkToggle.checked = parsed.linked;
   isLinked = parsed.linked;
@@ -1078,7 +1089,7 @@ applyParsedState(parseQueryState());
 // 初期表示を先に整えてから、積立側の初回計算を行う。renderAccumulate は
 // 連携中なら取崩側の計算・描画も内部で行うので、連携OFFで始まる場合だけ
 // ここで補う。
-w.principal.disabled = isLinked;
+withdrawEls.principal.disabled = isLinked;
 linkedReadout.classList.toggle("active", isLinked);
 setWithdrawalMode(withdrawalMode, { instant: true });
 renderAccumulate();

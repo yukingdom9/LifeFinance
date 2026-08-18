@@ -220,15 +220,19 @@
             <div class="summary-grid summary-grid-4">
               <article class="summary-card highlight-card">
                 <h2>毎月の取崩額</h2>
-                <p id="w-withdrawal-initial">-</p>
+                <p id="w-withdrawal-initial" class="amount-b">-</p>
               </article>
-              <article class="summary-card" id="w-card-20y">
-                <h2>20年後の取崩額</h2>
-                <p id="w-withdrawal-20y">-</p>
+              <article class="summary-card trend-card" id="w-card-trend">
+                <h2>取崩額の推移</h2>
+                <p class="trend-row">10年後：<span id="w-withdrawal-10y">-</span></p>
+                <p class="trend-row">20年後：<span id="w-withdrawal-20y">-</span></p>
+                <p class="trend-row">30年後：<span id="w-withdrawal-30y">-</span></p>
               </article>
-              <article class="summary-card" id="w-card-40y">
-                <h2>40年後の取崩額</h2>
-                <p id="w-withdrawal-40y">-</p>
+              <article class="summary-card trend-card" id="w-card-cumulative">
+                <h2>累計取崩額</h2>
+                <p class="trend-row">10年後：<span id="w-cumulative-10y">-</span></p>
+                <p class="trend-row">20年後：<span id="w-cumulative-20y">-</span></p>
+                <p class="trend-row">30年後：<span id="w-cumulative-30y">-</span></p>
               </article>
               <article class="summary-card hidden" id="w-card-depletion">
                 <h2>資産が尽きる時期</h2>
@@ -241,7 +245,7 @@
             </div>
             <svg id="withdraw-chart" viewBox="0 0 760 420" role="img" aria-label="取り崩しシミュレーションのグラフ"></svg>
             <div class="legend-row">
-              <span class="legend-entry"><span class="legend-item legend-a"></span>毎月の取崩額</span>
+              <span class="legend-entry"><span class="legend-item legend-b"></span>毎月の取崩額</span>
               <span class="legend-entry"><span class="legend-item legend-area"></span>資産残高</span>
             </div>
           </section>
