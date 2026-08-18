@@ -163,24 +163,14 @@ input[type="range"]:disabled {
 }
 
 .summary-grid-4 {
-  /* 140pxだと「累計取崩額」のような桁数の大きい金額でラベルと値が同じ行に収まりきらず、
-     OS・ブラウザのフォント幅の違い次第で文中に不揃いな改行が入ってしまう。
-     168pxを下回ったら（=1行に収まらなくなったら）カードごと次の行に折り返す方が
-     見た目が安定するため、そちらを優先する。 */
-  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 }
 
 .summary-card {
-  /* グリッドアイテムの初期 min-width は auto（中身の最小サイズ）になり、
-     長い金額があるとそれがトラック幅の下限を押し上げて4カードの幅が
-     揃わなくなることがある。0にして、常に上の grid-template-columns の
-     指定（168px）どおりにトラック幅が決まるようにする。 */
-  min-width: 0;
   padding: 14px 16px;
   border-radius: 16px;
   background: #f4f6fb;
   border: 1px solid #dbe2ec;
-  container-type: inline-size;
 }
 
 .summary-card h2 {
@@ -223,9 +213,6 @@ input[type="range"]:disabled {
   font-size: 1.1rem;
   font-weight: 700;
   color: #1f2d3d;
-  /* 金額の桁区切りカンマの間で改行されてしまわないようにする（折り返すなら
-     カードごと・カード内なら行ごと、が基本方針で、数値の途中では折り返さない）。 */
-  white-space: nowrap;
 }
 
 .summary-grid-4 .summary-card p.amount-b {
@@ -237,50 +224,22 @@ input[type="range"]:disabled {
   border-color: #cddaf4;
 }
 
-/* 取崩額の推移／累計取崩額カード: 3行（10年後/20年後/30年後）を狭いカード内に収めるため
-   小さめの文字にする。ラベルと金額は別要素にして横並び（flex）にし、金額の桁数が
-   大きくてラベルと同じ行に収まらないときは、文字の途中ではなく「ラベル→金額」の
-   区切りでだけ改行されるようにする。 */
+/* 取崩額の推移カード: 3行（10年後/20年後/30年後）を狭いカード内に収めるため小さめの文字にする */
 .trend-card h2 {
   margin-bottom: 6px;
 }
 
 .trend-card p.trend-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: flex-start;
-  column-gap: 4px;
   font-size: 0.78rem;
   font-weight: 600;
   line-height: 1.6;
   margin: 0;
   color: #1f2d3d;
-  white-space: normal; /* 上のsummary-grid-4ルールのnowrapを打ち消し、flexで折り返しを制御する */
 }
 
-.trend-card .trend-label {
-  flex: 0 1 auto;
-  white-space: nowrap;
-}
-
-.trend-card .trend-value {
-  flex: 0 1 auto;
+.trend-card .trend-row span {
   font-weight: 700;
   color: #1f4258;
-  white-space: nowrap;
-  text-align: left;
-}
-
-/* カード自体の実測幅が狭いとき（Windows/macOSのフォント幅の違いや、OS側の表示スケール
-   （例: macOSの125%表示）で実効ビューポートが狭くなった場合など）は、原因によらず
-   文字サイズを少し落として1行に収まりやすくする。ビューポート幅ではなくカードの実測幅
-   を見るcontainer queryなので、原因がフォントでもスケールでも同じように効く。 */
-@container (max-width: 190px) {
-  .trend-card p.trend-row {
-    font-size: 0.72rem;
-    column-gap: 6px;
-  }
 }
 
 .chart-panel {
