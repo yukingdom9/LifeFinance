@@ -1,8 +1,32 @@
 :root {
   color-scheme: light;
-  font-family: "Segoe UI", "Hiragino Sans", "Yu Gothic UI", sans-serif;
+  --font-rounded: "M PLUS Rounded 1c", "Hiragino Sans", "Yu Gothic UI", "Segoe UI", sans-serif;
+  font-family: "Noto Sans JP", "Hiragino Sans", "Yu Gothic UI", "Segoe UI", sans-serif;
   background: #FCFCFC;
   color: #1f2d3d;
+}
+
+/* 見出し類はまとめて丸ゴシックの「M PLUS Rounded 1c」にする */
+h1,
+h2,
+.stage-title,
+.panel-title,
+.connector-title,
+.total-result-label {
+  font-family: var(--font-rounded);
+}
+
+/* 金額・年齢などの数字部分も見出しと同じ「M PLUS Rounded 1c」にする */
+output,
+.summary-card p strong,
+.summary-card p span,
+.summary-grid-3 .summary-card p,
+.summary-grid-4 .summary-card p,
+.trend-card p.trend-row span,
+.connector-detail strong,
+.total-item-value,
+.total-result-value {
+  font-family: var(--font-rounded);
 }
 
 * {
@@ -43,6 +67,7 @@ body {
 .hero h1 {
   margin: 0 0 10px;
   font-size: 2.0rem;
+  font-weight: 800;
   color: #1f2d3d;
 }
 
@@ -83,6 +108,8 @@ body {
 
 .stage-title {
   font-size: 1.05rem;
+  font-weight: 800;
+  color: #0d1e2a;
 }
 
 .app-shell {
@@ -102,7 +129,8 @@ body {
 
 .panel-title {
   margin: 0 0 6px;
-  font-size: 1.6rem;
+  font-size: 1.25rem;
+  font-weight: 800;
   color: #1f2d3d;
 }
 
@@ -198,7 +226,7 @@ input[type="range"]:disabled {
 
 .summary-card p span.amount {
   color: #1f4258;
-  font-size: 1.4rem;
+  font-size: 1.2rem;
   font-weight: 800;
   letter-spacing: -0.02em;
 }
@@ -224,13 +252,23 @@ input[type="range"]:disabled {
   border-color: #cddaf4;
 }
 
+#a-final-balance {
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+#w-withdrawal-initial {
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
 /* 取崩額の推移カード: 3行（10年後/20年後/30年後）を狭いカード内に収めるため小さめの文字にする */
 .trend-card h2 {
   margin-bottom: 6px;
 }
 
 .trend-card p.trend-row {
-  font-size: 0.78rem;
+  font-size: 0.86rem;
   font-weight: 600;
   line-height: 1.6;
   margin: 0;
@@ -251,6 +289,11 @@ input[type="range"]:disabled {
   flex-direction: column;
   align-items: stretch;
   justify-content: center;
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
 }
 
 svg {
@@ -318,7 +361,7 @@ svg {
 }
 
 .connector-card {
-  width: min(560px, 100%);
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -527,7 +570,7 @@ svg {
   padding: 16px 18px;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: none;
 }
 
 .total-item-label {
@@ -558,7 +601,7 @@ svg {
   padding: 22px 24px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  border: none;
 }
 
 .total-result-label {
@@ -585,7 +628,7 @@ svg {
 }
 
 .lf-link-card {
-  width: min(560px, 100%);
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 14px;

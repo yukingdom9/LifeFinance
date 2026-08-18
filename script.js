@@ -4,12 +4,39 @@
 
 const byId = (id) => document.getElementById(id);
 
+// 「1億2,345万円」のような億/万単位の表記にする（グラフの軸ラベルは対象外、
+// formatWithdrawAxis / formatPrincipalAxis / formatPensionAxisValue を使う）。
 function formatCurrency(value) {
-  return new Intl.NumberFormat("ja-JP", {
-    style: "currency",
-    currency: "JPY",
-    maximumFractionDigits: 0,
-  }).format(value);
+  const isNegative = value < 0;
+  const absValue = Math.round(Math.abs(value));
+  let oku = Math.floor(absValue / 100000000);
+  let man = Math.round((absValue - oku * 100000000) / 10000);
+  if (man >= 10000) {
+    man -= 10000;
+    oku += 1;
+  }
+
+  let result;
+  if (oku > 0 && man > 0) {
+    result = `${oku.toLocaleString("ja-JP")}億${man.toLocaleString("ja-JP")}万円`;
+  } else if (oku > 0) {
+    result = `${oku.toLocaleString("ja-JP")}億円`;
+  } else {
+    result = `${man.toLocaleString("ja-JP")}万円`;
+  }
+  return isNegative ? `-${result}` : result;
+}
+
+// 毎月の積立額/取崩額・年金月額・統合結果など、金額が小さく千円単位の
+// 増減も見えてほしい項目向け。万円換算で小数点第一位まで表示する
+// （例: 12.3万円）。
+function formatCurrencyPrecise(value) {
+  const isNegative = value < 0;
+  const manText = (Math.abs(value) / 10000).toLocaleString("ja-JP", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
+  return `${isNegative ? "-" : ""}${manText}万円`;
 }
 
 function formatPercent(value) {
@@ -62,11 +89,29 @@ function clamp(value, min, max) {
 const CHART_WIDTH = 760;
 const CHART_HEIGHT = 420;
 
+// 縦軸ラベルのみ（右軸なし）の単一軸チャート共通マージン。積立チャートと
+// 年金チャートはレイアウトが同じなのでこの定数を共有する
+// （取崩チャートは右軸もある2軸チャートのため、別途マージンを定義する）。
+const SINGLE_AXIS_CHART_MARGIN = { top: 24, right: 24, bottom: 48, left: 84 };
+
 // エリアグラフの塗り色。半透明にしてグリッド線が透けて見えるようにしつつ、
 // 白背景に乗せたときの見た目の色合いは元の #D2DDE9（不透明）と同じになるよう
 // 逆算した濃いめの色を、低い opacity で重ねている。
 const AREA_FILL_COLOR = "#4B77A7";
 const AREA_FILL_OPACITY = 0.25;
+
+// 横グリッド線・軸ラベル用に [0, maxValue*0.25, maxValue*0.5, maxValue*0.75, maxValue]
+// の5点を作る（積立・取崩・年金の3チャート、取崩チャートは左右2軸で共通利用）。
+function buildAxisTicks(maxValue) {
+  return [0, 0.25, 0.5, 0.75, 1].map((t) => maxValue * t);
+}
+
+// Y座標変換: 0未満はグラフ下端(0)扱いにして、maxValueに対する比率で高さ方向の
+// 位置を求める（積立チャートの折れ線・取崩チャートの資産残高エリア・年金チャートの
+// 折れ線で共通。取崩チャートの取崩額バーは上限側のクランプも必要なため対象外）。
+function valueToY(value, margin, plotHeight, maxValue) {
+  return margin.top + plotHeight * (1 - Math.max(0, value) / maxValue);
+}
 
 // 背景と、グラフ本体の白いプロットエリアを描画する（svgの中身は毎回描き直すため一旦クリアする）。
 function drawChartFrame(svg, width, height, margin, plotWidth, plotHeight) {
@@ -315,12 +360,12 @@ function getProjection(principal, monthly, annualRate, years) {
 }
 
 function drawAccumulateChart(balances, years) {
-  const margin = { top: 24, right: 24, bottom: 48, left: 84 };
+  const margin = SINGLE_AXIS_CHART_MARGIN;
   const plotWidth = CHART_WIDTH - margin.left - margin.right;
   const plotHeight = CHART_HEIGHT - margin.top - margin.bottom;
 
   const maxValue = getNiceMax(Math.max(...balances, 1) * 1.1);
-  const ticks = [0, 0.25, 0.5, 0.75, 1].map((t) => maxValue * t);
+  const ticks = buildAxisTicks(maxValue);
 
   drawChartFrame(accumulateEls.chart, CHART_WIDTH, CHART_HEIGHT, margin, plotWidth, plotHeight);
   drawHorizontalGridlines(accumulateEls.chart, {
@@ -334,7 +379,7 @@ function drawAccumulateChart(balances, years) {
 
   const linePoints = balances.map((value, index) => {
     const x = margin.left + (index / (balances.length - 1)) * plotWidth;
-    const y = margin.top + plotHeight * (1 - Math.max(0, value) / maxValue);
+    const y = valueToY(value, margin, plotHeight, maxValue);
     return { x, y };
   });
 
@@ -352,7 +397,7 @@ function renderAccumulate() {
   const years = Number(accumulateEls.years.value);
 
   accumulateEls.principalValue.value = formatCurrency(principal);
-  accumulateEls.monthlyValue.value = formatCurrency(monthly);
+  accumulateEls.monthlyValue.value = formatCurrencyPrecise(monthly);
   accumulateEls.rateValue.value = formatPercent(annualRate);
   accumulateEls.yearsValue.value = `${years}年`;
 
@@ -381,6 +426,10 @@ function renderAccumulate() {
 // =====================================================================
 // Stage 2: 取崩シミュレーション（定率取崩 / 定額取崩 / 動的取崩）
 // =====================================================================
+
+// 取崩シミュレーションの対象期間（定率/定額/動的取崩すべてで共通）。
+const WITHDRAWAL_YEARS = 40;
+const WITHDRAWAL_MONTHS = WITHDRAWAL_YEARS * 12;
 
 // 定率取崩・定額取崩に共通する40年間の月次シミュレーション。
 // getWithdrawal は毎月の希望取崩額を返すコールバックで、方式ごとの違いを吸収する。
@@ -418,7 +467,7 @@ function buildWithdrawalSeries(principal, annualRate, withdrawalRate) {
   return simulateWithdrawal({
     principal,
     annualRate,
-    months: 40 * 12,
+    months: WITHDRAWAL_MONTHS,
     // 取崩率方式: 毎月、運用前の残高に対して一定割合を取り崩す。
     getWithdrawal: ({ preGrowthBalance }) => (preGrowthBalance * (withdrawalRate / 100)) / 12,
   });
@@ -435,7 +484,7 @@ function buildFixedWithdrawalSeries(principal, annualRate, monthlyWithdrawal, in
   return simulateWithdrawal({
     principal,
     annualRate,
-    months: 40 * 12,
+    months: WITHDRAWAL_MONTHS,
     // 定額方式: 毎月、残高に関わらず一定額を取り崩そうとする。
     // インフレ率が設定されている場合、取崩額は毎年インフレ率分だけ増えていく。
     getWithdrawal: ({ month }) => applyInflation(monthlyWithdrawal, inflationRate, month),
@@ -450,7 +499,7 @@ function buildDynamicWithdrawalSeries(principal, annualRate, fixedWithdrawal, in
   return simulateWithdrawal({
     principal,
     annualRate,
-    months: 40 * 12,
+    months: WITHDRAWAL_MONTHS,
     getWithdrawal: ({ preGrowthBalance, month }) =>
       applyInflation(fixedWithdrawal, inflationRate, month) + (preGrowthBalance * (surplusRate / 100)) / 12,
   });
@@ -481,7 +530,7 @@ const withdrawalModeConfigs = {
     compute(principal, annualRate) {
       const monthlyWithdrawal = Number(withdrawEls.fixedWithdrawal.value);
       const inflationRate = Number(withdrawEls.fixedInflation.value);
-      withdrawEls.fixedWithdrawalValue.value = formatCurrency(monthlyWithdrawal);
+      withdrawEls.fixedWithdrawalValue.value = formatCurrencyPrecise(monthlyWithdrawal);
       withdrawEls.fixedInflationValue.value = formatPercent(inflationRate);
       return buildFixedWithdrawalSeries(principal, annualRate, monthlyWithdrawal, inflationRate);
     },
@@ -497,7 +546,7 @@ const withdrawalModeConfigs = {
       const fixedWithdrawal = Number(withdrawEls.dynamicFixed.value);
       const inflationRate = Number(withdrawEls.dynamicInflation.value);
       const surplusRate = Number(withdrawEls.dynamicRate.value);
-      withdrawEls.dynamicFixedValue.value = formatCurrency(fixedWithdrawal);
+      withdrawEls.dynamicFixedValue.value = formatCurrencyPrecise(fixedWithdrawal);
       withdrawEls.dynamicInflationValue.value = formatPercent(inflationRate);
       withdrawEls.dynamicRateValue.value = formatPercent(surplusRate);
       return buildDynamicWithdrawalSeries(principal, annualRate, fixedWithdrawal, inflationRate, surplusRate);
@@ -513,8 +562,8 @@ function drawWithdrawChart(series) {
 
   const maxLeft = getNiceMax(Math.max(...series.bars, 1) * 1.1);
   const maxRight = getNiceMax(Math.max(...series.points.map((point) => point.y), 1) * 1.1);
-  const leftTicks = [0, 0.25, 0.5, 0.75, 1].map((t) => maxLeft * t);
-  const rightTicks = [0, 0.25, 0.5, 0.75, 1].map((t) => maxRight * t);
+  const leftTicks = buildAxisTicks(maxLeft);
+  const rightTicks = buildAxisTicks(maxRight);
 
   drawChartFrame(withdrawEls.chart, CHART_WIDTH, CHART_HEIGHT, margin, plotWidth, plotHeight);
 
@@ -539,8 +588,8 @@ function drawWithdrawChart(series) {
 
   const baselineY = margin.top + plotHeight;
   const balancePoints = series.points.map((point) => {
-    const x = margin.left + (point.x / 40) * plotWidth;
-    const y = margin.top + plotHeight * (1 - Math.max(0, point.y) / maxRight);
+    const x = margin.left + (point.x / WITHDRAWAL_YEARS) * plotWidth;
+    const y = valueToY(point.y, margin, plotHeight, maxRight);
     return { x, y };
   });
   drawFilledArea(withdrawEls.chart, balancePoints, baselineY);
@@ -552,20 +601,26 @@ function drawWithdrawChart(series) {
   });
   drawLinePath(withdrawEls.chart, withdrawalLinePoints, "#d97706", 3.5);
 
-  drawChartXAxisLabels(withdrawEls.chart, { height: CHART_HEIGHT, margin, plotWidth, maxValue: 40, suffix: "年" });
+  drawChartXAxisLabels(withdrawEls.chart, {
+    height: CHART_HEIGHT,
+    margin,
+    plotWidth,
+    maxValue: WITHDRAWAL_YEARS,
+    suffix: "年",
+  });
 }
 
 // 「資産が尽きる時期」カードの表示文言を組み立てる。
 function formatDepletionText(depletionMonth) {
   if (depletionMonth == null) {
-    return "40年以内に枯渇なし";
+    return `${WITHDRAWAL_YEARS}年以内に枯渇なし`;
   }
   const years = Math.floor(depletionMonth / 12);
   const months = depletionMonth % 12;
   return `${years}年${months}か月`;
 }
 
-// 「10年後 ¥12,345,678」のような行は、CSSで改行を禁止しているだけだと
+// 「10年後 1億2,345万円」のような行は、CSSで改行を禁止しているだけだと
 // 桁数が多い金額のときにカード幅からはみ出してしまう。はみ出す場合は
 // 改行する代わりに文字サイズを段階的に縮小し、1行に収まる大きさを探す。
 const TREND_ROW_MIN_FONT_PX = 9;
@@ -618,7 +673,7 @@ function updateWithdrawSummaryCards(activeConfig, { points, bars, depletionMonth
   withdrawEls.finalBalance.textContent = formatCurrency(finalBalance);
 
   latestWithdrawalInitial = bars[0] ?? 0;
-  withdrawEls.withdrawalInitial.textContent = formatCurrency(latestWithdrawalInitial);
+  withdrawEls.withdrawalInitial.textContent = formatCurrencyPrecise(latestWithdrawalInitial);
 
   if (activeConfig.showDepletionCard) {
     withdrawEls.depletion.textContent = formatDepletionText(depletionMonth);
@@ -783,7 +838,6 @@ const pensionEls = {
   monthly1: byId("p-monthly1"),
   monthly2: byId("p-monthly2"),
   breakevenText: byId("p-breakevenText"),
-  investmentText: byId("p-investmentText"),
   chart: byId("pension-chart"),
 };
 
@@ -875,23 +929,17 @@ function computePensionDerived() {
 }
 
 function updatePensionResults(derived) {
-  const { monthly1, monthly2, series1, series2, breakevenAge } = derived;
+  const { monthly1, monthly2, breakevenAge } = derived;
 
   pensionEls.monthly1Age.textContent = `${pensionState.startAge1}歳`;
   pensionEls.monthly2Age.textContent = `${pensionState.startAge2}歳`;
-  pensionEls.monthly1.textContent = formatCurrency(monthly1);
-  pensionEls.monthly2.textContent = formatCurrency(monthly2);
+  pensionEls.monthly1.textContent = formatCurrencyPrecise(monthly1);
+  pensionEls.monthly2.textContent = formatCurrencyPrecise(monthly2);
 
   pensionEls.breakevenText.textContent =
     breakevenAge !== null
-      ? `受給総額の損益分岐点はおよそ ${Math.round(breakevenAge)} 歳です。`
-      : `${pensionMaxAge}歳までに損益分岐点が到達しませんでした。`;
-
-  const totalAtMaxAge1 = Math.round(series1[series1.length - 1].value);
-  const totalAtMaxAge2 = Math.round(series2[series2.length - 1].value);
-  pensionEls.investmentText.textContent = `${pensionState.startAge1}歳開始の${pensionMaxAge}歳時点の運用累計は約 ${formatCurrency(
-    totalAtMaxAge1
-  )}、${pensionState.startAge2}歳開始は約 ${formatCurrency(totalAtMaxAge2)}です。`;
+      ? `受給総額の損益分岐点はおよそ ${Math.round(breakevenAge)} 歳です`
+      : `${pensionMaxAge}歳までに損益分岐点が到達しませんでした`;
 }
 
 function formatPensionAxisValue(value) {
@@ -908,13 +956,13 @@ function formatPensionAxisValue(value) {
 // 積立投資チャート（drawAccumulateChart）と同じ基本構造
 // （白いプロットエリア＋横方向のグリッド線のみ、縦線なし）で描画する。
 function drawPensionChart(series1, series2, maxValue) {
-  const margin = { top: 24, right: 24, bottom: 48, left: 84 };
+  const margin = SINGLE_AXIS_CHART_MARGIN;
   const plotWidth = CHART_WIDTH - margin.left - margin.right;
   const plotHeight = CHART_HEIGHT - margin.top - margin.bottom;
 
   drawChartFrame(pensionEls.chart, CHART_WIDTH, CHART_HEIGHT, margin, plotWidth, plotHeight);
 
-  const ticks = [0, 0.25, 0.5, 0.75, 1].map((t) => maxValue * t);
+  const ticks = buildAxisTicks(maxValue);
   drawHorizontalGridlines(pensionEls.chart, {
     ticks,
     margin,
@@ -929,7 +977,7 @@ function drawPensionChart(series1, series2, maxValue) {
   const toPlotPoints = (series) =>
     series.map((point) => ({
       x: margin.left + ((point.age - pensionMinAge) / ageRange) * plotWidth,
-      y: margin.top + plotHeight * (1 - Math.max(0, point.value) / maxValue),
+      y: valueToY(point.value, margin, plotHeight, maxValue),
     }));
 
   drawLinePath(pensionEls.chart, toPlotPoints(series1), "#336485", 3);
@@ -994,10 +1042,10 @@ const totalResultEl = byId("total-result");
 function renderTotal() {
   const total = latestWithdrawalInitial + latestPensionMonthly2;
 
-  totalWithdrawalEl.textContent = formatCurrency(latestWithdrawalInitial);
-  totalPensionEl.textContent = formatCurrency(latestPensionMonthly2);
+  totalWithdrawalEl.textContent = formatCurrencyPrecise(latestWithdrawalInitial);
+  totalPensionEl.textContent = formatCurrencyPrecise(latestPensionMonthly2);
   totalPensionAgeEl.textContent = pensionState.startAge2;
-  totalResultEl.textContent = formatCurrency(total);
+  totalResultEl.textContent = formatCurrencyPrecise(total);
 }
 
 // =====================================================================
