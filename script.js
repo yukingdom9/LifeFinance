@@ -1168,4 +1168,25 @@ if (!isLinked) {
 }
 
 updatePensionInputs();
+
+// =====================================================================
+// スライドバーの「つまみより左側」を塗りつぶす
+// =====================================================================
+// input[type="range"] は appearance:none にしているため、ネイティブの
+// 塗りつぶし表現（accent-color）が使えない。値に応じて CSS カスタム
+// プロパティ --range-fill（0%〜100%）を更新し、style.css 側の
+// linear-gradient で塗りつぶし部分を描画する。
+// 個別の value 書き換え箇所（連携時の元本同期・URL復元など）を
+// すべて追いかける代わりに、毎フレーム全スライダーをまとめて同期する。
+function syncRangeFills() {
+  document.querySelectorAll('input[type="range"]').forEach((slider) => {
+    const min = Number(slider.min) || 0;
+    const max = Number(slider.max) || 100;
+    const value = Number(slider.value);
+    const pct = max > min ? ((value - min) / (max - min)) * 100 : 0;
+    slider.style.setProperty("--range-fill", `${pct}%`);
+  });
+  requestAnimationFrame(syncRangeFills);
+}
+requestAnimationFrame(syncRangeFills);
 renderPension();
