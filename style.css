@@ -235,6 +235,10 @@ input[type="range"]:disabled {
   line-height: 1.6;
   margin: 0;
   color: #1f2d3d;
+  /* 「10年後」と金額の間で改行させたくないので折り返しを禁止する。
+     幅が足りない場合は script.js 側で font-size を動的に縮小して1行に収める。 */
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .trend-card .trend-row span {

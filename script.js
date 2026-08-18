@@ -565,6 +565,27 @@ function formatDepletionText(depletionMonth) {
   return `${years}年${months}か月`;
 }
 
+// 「10年後 ¥12,345,678」のような行は、CSSで改行を禁止しているだけだと
+// 桁数が多い金額のときにカード幅からはみ出してしまう。はみ出す場合は
+// 改行する代わりに文字サイズを段階的に縮小し、1行に収まる大きさを探す。
+const TREND_ROW_MIN_FONT_PX = 9;
+function fitTrendRow(rowEl) {
+  rowEl.style.fontSize = "";
+  const baseFontSize = parseFloat(getComputedStyle(rowEl).fontSize);
+  let fontSize = baseFontSize;
+  while (rowEl.scrollWidth > rowEl.clientWidth && fontSize > TREND_ROW_MIN_FONT_PX) {
+    fontSize -= 0.5;
+    rowEl.style.fontSize = `${fontSize}px`;
+  }
+}
+
+// 「取崩額の推移」「累計取崩額」カード内の全行をまとめて縮小対象にする。
+// カード幅はウィンドウ幅（レスポンシブ）にも左右されるため、resize時にも呼び直す。
+function fitAllTrendRows() {
+  document.querySelectorAll(".trend-card p.trend-row").forEach(fitTrendRow);
+}
+window.addEventListener("resize", fitAllTrendRows);
+
 // 「取崩額の推移」カード: 10年後/20年後/30年後の毎月の取崩額（単月の額）を表示する。
 function updateWithdrawTrendCards(bars) {
   withdrawEls.withdrawal10y.textContent = formatCurrency(bars[10 * 12 - 1] ?? 0);
@@ -606,6 +627,7 @@ function updateWithdrawSummaryCards(activeConfig, { points, bars, depletionMonth
   if (activeConfig.showTrendCards) {
     updateWithdrawTrendCards(bars);
     updateWithdrawCumulativeCards(bars);
+    fitAllTrendRows();
   }
 }
 
