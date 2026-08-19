@@ -222,6 +222,7 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: 50%;
   background: #4e79a7;
   border: none;
+  box-shadow: none;
   cursor: pointer;
 }
 
@@ -238,6 +239,7 @@ input[type="range"]::-moz-range-thumb {
   border-radius: 50%;
   background: #4e79a7;
   border: none;
+  box-shadow: none;
   cursor: pointer;
 }
 
@@ -249,10 +251,12 @@ input[type="range"]:disabled {
 
 input[type="range"]:disabled::-webkit-slider-thumb {
   background: #b7c2d4;
+  box-shadow: none;
 }
 
 input[type="range"]:disabled::-moz-range-thumb {
   background: #b7c2d4;
+  box-shadow: none;
 }
 
 /* ---------- Summary / result cards ---------- */
