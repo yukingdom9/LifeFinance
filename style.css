@@ -53,7 +53,7 @@ body {
 /* ---------- Site band (site title) ---------- */
 
 .site-band {
-  background: #336485;
+  background: #4E79A7;
   padding: 18px 16px;
   text-align: center;
 }
@@ -131,7 +131,7 @@ body {
 
 .panel {
   background: #ffffff;
-  border: 1px solid #dbe2ec;
+  border: 1px solid #BFC0C2;
   box-shadow: 0 20px 50px rgba(31, 45, 61, 0.08);
   border-radius: 24px;
   padding: 24px;
@@ -289,7 +289,7 @@ input[type="range"]:disabled::-moz-range-thumb {
   padding: 14px 16px;
   border-radius: 16px;
   background: #ffffff;
-  border: 1px solid #dbe2ec;
+  border: 1px solid #BFC0C2;
 }
 
 .summary-card h2 {
@@ -340,7 +340,7 @@ input[type="range"]:disabled::-moz-range-thumb {
 
 .highlight-card {
   background: #eaf0fb;
-  border-color: #cddaf4;
+  border-color: #BFC0C2;
 }
 
 #a-final-balance {
@@ -405,44 +405,6 @@ svg {
   aspect-ratio: 760 / 420;
 }
 
-/* ---------- Legend (withdraw chart / pension chart) ---------- */
-
-.legend-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: center;
-  margin-top: 14px;
-  color: #5b6b82;
-  font-size: 0.85rem;
-}
-
-.legend-entry {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.legend-item {
-  width: 16px;
-  height: 8px;
-  display: inline-block;
-  border-radius: 4px;
-}
-
-.legend-a {
-  background: #336485;
-}
-
-.legend-b {
-  background: #d97706;
-}
-
-.legend-area {
-  background: #d2dde9;
-  border: 1px solid #b7bec2;
-}
-
 /* ---------- Link connector between accumulate / withdraw ---------- */
 
 .connector {
@@ -457,7 +419,7 @@ svg {
   align-items: center;
   gap: 14px;
   background: #ffffff;
-  border: 1px solid #dbe2ec;
+  border: 1px solid #BFC0C2;
   border-radius: 18px;
   padding: 14px 20px;
   box-shadow: 0 12px 30px rgba(31, 45, 61, 0.06);
@@ -565,7 +527,7 @@ svg {
   display: inline-flex;
   padding: 4px;
   margin-bottom: 20px;
-  background: #f4f6fb;
+  background: #F0F1F2;
   border-radius: 14px;
   gap: 4px;
 }
@@ -618,7 +580,6 @@ svg {
   margin: -8px 0 14px;
   padding: 10px 12px;
   background: #eaf0fb;
-  border: 1px solid #d5e0f3;
   border-radius: 12px;
   font-size: 0.82rem;
   color: #336485;
@@ -724,7 +685,7 @@ svg {
   align-items: center;
   gap: 14px;
   background: #ffffff;
-  border: 1px solid #dbe2ec;
+  border: 1px solid #BFC0C2;
   border-radius: 18px;
   padding: 14px 20px;
   box-shadow: 0 12px 30px rgba(31, 45, 61, 0.06);

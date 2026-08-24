@@ -89,10 +89,13 @@ function clamp(value, min, max) {
 const CHART_WIDTH = 760;
 const CHART_HEIGHT = 420;
 
-// 縦軸ラベルのみ（右軸なし）の単一軸チャート共通マージン。積立チャートと
-// 年金チャートはレイアウトが同じなのでこの定数を共有する
-// （取崩チャートは右軸もある2軸チャートのため、別途マージンを定義する）。
+// 縦軸ラベルのみ（右軸なし）の単一軸チャート共通マージン（積立チャート用）。
 const SINGLE_AXIS_CHART_MARGIN = { top: 24, right: 24, bottom: 48, left: 84 };
+
+// 凡例つきチャート（取崩・年金）は、CHART_WIDTH/CHART_HEIGHT・横幅方向のマージンは
+// 他のチャートと同じまま、下マージンだけを広げて白いプロットエリア内に凡例を収める
+// （全体のサイズ・アスペクト比は変えない）。
+const LEGEND_BOTTOM_MARGIN = 80;
 
 // エリアグラフの塗り色。半透明にしてグリッド線が透けて見えるようにしつつ、
 // 白背景に乗せたときの見た目の色合いは元の #D2DDE9（不透明）と同じになるよう
@@ -116,14 +119,14 @@ function valueToY(value, margin, plotHeight, maxValue) {
 // 背景と、グラフ本体の白いプロットエリアを描画する（svgの中身は毎回描き直すため一旦クリアする）。
 function drawChartFrame(svg, width, height, margin, plotWidth, plotHeight) {
   svg.innerHTML = "";
-  svg.appendChild(svgEl("rect", { x: 0, y: 0, width, height, fill: "#f4f6fb", rx: 20 }));
+  svg.appendChild(svgEl("rect", { x: 0, y: 0, width, height, fill: "#F5F5F6", rx: 20 }));
   svg.appendChild(
     svgEl("rect", {
       x: margin.left,
       y: margin.top,
       width: plotWidth,
       height: plotHeight,
-      fill: "#ffffff",
+      fill: "#F5F5F6",
       stroke: "#dbe2ec",
     })
   );
@@ -254,6 +257,34 @@ function drawLinePath(svg, points, stroke, strokeWidth) {
       "stroke-linecap": "round",
     })
   );
+}
+
+// 凡例（色つきスウォッチ＋ラベル）を、白いプロットエリア内（LEGEND_AREA_HEIGHT分の
+// 下部余白）に横並び・中央寄せで描画する（取崩チャート・年金チャートで使用）。
+function drawLegend(svg, { items, width, y }) {
+  const swatchWidth = 16;
+  const swatchHeight = 8;
+  const swatchGap = 6;
+  const itemGap = 20;
+
+  const entries = items.map((item) => {
+    const group = svgEl("g", {});
+    group.appendChild(
+      svgEl("rect", { width: swatchWidth, height: swatchHeight, y: -swatchHeight / 2, rx: 4, fill: item.color })
+    );
+    const label = svgEl("text", { x: swatchWidth + swatchGap, y: 4, "font-size": 13, fill: "#5b6b82" });
+    label.textContent = item.label;
+    group.appendChild(label);
+    svg.appendChild(group);
+    return { group, itemWidth: swatchWidth + swatchGap + label.getComputedTextLength() };
+  });
+
+  const totalWidth = entries.reduce((sum, entry) => sum + entry.itemWidth, 0) + itemGap * (items.length - 1);
+  let x = (width - totalWidth) / 2;
+  entries.forEach(({ group, itemWidth }) => {
+    group.setAttribute("transform", `translate(${x}, ${y})`);
+    x += itemWidth + itemGap;
+  });
 }
 
 // =====================================================================
@@ -555,7 +586,7 @@ const withdrawalModeConfigs = {
 };
 
 function drawWithdrawChart(series) {
-  const margin = { top: 24, right: 80, bottom: 48, left: 72 };
+  const margin = { top: 24, right: 80, bottom: LEGEND_BOTTOM_MARGIN, left: 72 };
   const plotWidth = CHART_WIDTH - margin.left - margin.right;
   const plotHeight = CHART_HEIGHT - margin.top - margin.bottom;
   const months = series.bars.length;
@@ -607,6 +638,15 @@ function drawWithdrawChart(series) {
     plotWidth,
     maxValue: WITHDRAWAL_YEARS,
     suffix: "年",
+  });
+
+  drawLegend(withdrawEls.chart, {
+    width: CHART_WIDTH,
+    y: CHART_HEIGHT - 22,
+    items: [
+      { color: "#d97706", label: "毎月の取崩額" },
+      { color: "#d2dde9", label: "資産残高" },
+    ],
   });
 }
 
@@ -956,7 +996,7 @@ function formatPensionAxisValue(value) {
 // 積立投資チャート（drawAccumulateChart）と同じ基本構造
 // （白いプロットエリア＋横方向のグリッド線のみ、縦線なし）で描画する。
 function drawPensionChart(series1, series2, maxValue) {
-  const margin = SINGLE_AXIS_CHART_MARGIN;
+  const margin = { ...SINGLE_AXIS_CHART_MARGIN, bottom: LEGEND_BOTTOM_MARGIN };
   const plotWidth = CHART_WIDTH - margin.left - margin.right;
   const plotHeight = CHART_HEIGHT - margin.top - margin.bottom;
 
@@ -990,6 +1030,15 @@ function drawPensionChart(series1, series2, maxValue) {
     minValue: pensionMinAge,
     maxValue: pensionMaxAge,
     suffix: "歳",
+  });
+
+  drawLegend(pensionEls.chart, {
+    width: CHART_WIDTH,
+    y: CHART_HEIGHT - 22,
+    items: [
+      { color: "#336485", label: "年齢①ライン" },
+      { color: "#d97706", label: "年齢②ライン" },
+    ],
   });
 }
 
