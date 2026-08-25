@@ -100,7 +100,7 @@ body {
   align-items: center;
   gap: 10px;
   font-weight: 700;
-  color: #336485;
+  color: #4E79A7;
 }
 
 .stage-index {
@@ -110,7 +110,7 @@ body {
   width: 32px;
   height: 32px;
   border-radius: 999px;
-  background: #336485;
+  background: #4E79A7;
   color: #ffffff;
   font-size: 0.95rem;
   font-weight: 800;
@@ -431,7 +431,7 @@ svg {
   height: 40px;
   border-radius: 999px;
   background: #eaf0fb;
-  color: #336485;
+  color: #4E79A7;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -457,7 +457,7 @@ svg {
 }
 
 .connector-detail strong {
-  color: #336485;
+  color: #4E79A7;
   font-variant-numeric: tabular-nums;
 }
 
@@ -508,7 +508,7 @@ svg {
 }
 
 .switch input:checked + .switch-track {
-  background: #336485;
+  background: #4E79A7;
 }
 
 .switch input:checked + .switch-track::before {
@@ -516,7 +516,7 @@ svg {
 }
 
 .switch input:focus-visible + .switch-track {
-  outline: 2px solid #336485;
+  outline: 2px solid #4E79A7;
   outline-offset: 2px;
 }
 
@@ -538,7 +538,7 @@ svg {
   left: 0;
   bottom: 4px;
   width: 0;
-  background: #336485;
+  background: #4E79A7;
   border-radius: 10px;
   transform: translateX(0);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -582,7 +582,7 @@ svg {
   background: #eaf0fb;
   border-radius: 12px;
   font-size: 0.82rem;
-  color: #336485;
+  color: #4E79A7;
 }
 
 .linked-readout.active {
@@ -712,7 +712,7 @@ svg {
 .lf-link-btn {
   flex: none;
   border: none;
-  background: #336485;
+  background: #4E79A7;
   color: #ffffff;
   padding: 12px 18px;
   border-radius: 14px;
