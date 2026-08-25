@@ -131,7 +131,7 @@ body {
 
 .panel {
   background: #ffffff;
-  border: 1px solid #BFC0C2;
+  border: 1px solid #E2E3E5;
   box-shadow: 0 20px 50px rgba(31, 45, 61, 0.08);
   border-radius: 24px;
   padding: 24px;
@@ -289,7 +289,7 @@ input[type="range"]:disabled::-moz-range-thumb {
   padding: 14px 16px;
   border-radius: 16px;
   background: #ffffff;
-  border: 1px solid #BFC0C2;
+  border: 1px solid #E2E3E5;
 }
 
 .summary-card h2 {
@@ -340,7 +340,7 @@ input[type="range"]:disabled::-moz-range-thumb {
 
 .highlight-card {
   background: #eaf0fb;
-  border-color: #BFC0C2;
+  border-color: #E2E3E5;
 }
 
 #a-final-balance {
@@ -419,7 +419,7 @@ svg {
   align-items: center;
   gap: 14px;
   background: #ffffff;
-  border: 1px solid #BFC0C2;
+  border: 1px solid #E2E3E5;
   border-radius: 18px;
   padding: 14px 20px;
   box-shadow: 0 12px 30px rgba(31, 45, 61, 0.06);
@@ -685,7 +685,7 @@ svg {
   align-items: center;
   gap: 14px;
   background: #ffffff;
-  border: 1px solid #BFC0C2;
+  border: 1px solid #E2E3E5;
   border-radius: 18px;
   padding: 14px 20px;
   box-shadow: 0 12px 30px rgba(31, 45, 61, 0.06);
