@@ -1,23 +1,24 @@
 :root {
   color-scheme: light;
-  --font-rounded: "M PLUS Rounded 1c", "Hiragino Sans", "Yu Gothic UI", "Segoe UI", sans-serif;
+  --font-heading: "Noto Sans JP", "Hiragino Sans", "Yu Gothic UI", "Segoe UI", sans-serif;
+  --font-number: "Inter", "Noto Sans JP", "Hiragino Sans", "Yu Gothic UI", "Segoe UI", sans-serif;
   font-family: "Noto Sans JP", "Hiragino Sans", "Yu Gothic UI", "Segoe UI", sans-serif;
   background: #FCFCFC;
   color: #1f2d3d;
 }
 
-/* 見出し類はまとめて丸ゴシックの「M PLUS Rounded 1c」にする */
+/* 見出し・項目名はゴシックの「Noto Sans JP」にする */
 h1,
 h2,
-.stage-index,
 .stage-title,
 .panel-title,
 .connector-title,
 .total-result-label {
-  font-family: var(--font-rounded);
+  font-family: var(--font-heading);
 }
 
-/* 金額・年齢などの数字部分も見出しと同じ「M PLUS Rounded 1c」にする */
+/* 金額・年齢・ステージ番号などの数字部分は「Inter」にする */
+.stage-index,
 output,
 .summary-card p strong,
 .summary-card p span,
@@ -27,7 +28,7 @@ output,
 .connector-detail strong,
 .total-item-value,
 .total-result-value {
-  font-family: var(--font-rounded);
+  font-family: var(--font-number);
 }
 
 * {
