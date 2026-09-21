@@ -134,7 +134,7 @@ body {
   background: #ffffff;
   border: 1px solid #E2E3E5;
   box-shadow: 0 20px 50px rgba(31, 45, 61, 0.08);
-  border-radius: 24px;
+  border-radius: 12px;
   padding: 24px;
 }
 
@@ -288,7 +288,7 @@ input[type="range"]:disabled::-moz-range-thumb {
 
 .summary-card {
   padding: 14px 16px;
-  border-radius: 16px;
+  border-radius: 10px;
   background: #ffffff;
   border: 1px solid #E2E3E5;
 }
@@ -421,7 +421,7 @@ svg {
   gap: 14px;
   background: #ffffff;
   border: 1px solid #E2E3E5;
-  border-radius: 18px;
+  border-radius: 12px;
   padding: 14px 20px;
   box-shadow: 0 12px 30px rgba(31, 45, 61, 0.06);
 }
@@ -529,7 +529,7 @@ svg {
   padding: 4px;
   margin-bottom: 20px;
   background: #F0F1F2;
-  border-radius: 14px;
+  border-radius: 8px;
   gap: 4px;
 }
 
@@ -540,7 +540,7 @@ svg {
   bottom: 4px;
   width: 0;
   background: #4E79A7;
-  border-radius: 10px;
+  border-radius: 6px;
   transform: translateX(0);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   will-change: transform;
@@ -555,7 +555,7 @@ svg {
   font-weight: 700;
   font-size: 0.94rem;
   padding: 10px 18px;
-  border-radius: 10px;
+  border-radius: 6px;
   cursor: pointer;
   transition: color 0.2s ease;
 }
@@ -581,7 +581,7 @@ svg {
   margin: -8px 0 14px;
   padding: 10px 12px;
   background: #eaf0fb;
-  border-radius: 12px;
+  border-radius: 8px;
   font-size: 0.82rem;
   color: #4E79A7;
 }
@@ -621,7 +621,7 @@ svg {
   flex-direction: column;
   gap: 6px;
   padding: 16px 18px;
-  border-radius: 16px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.1);
   border: none;
 }
@@ -652,7 +652,7 @@ svg {
   justify-content: space-between;
   gap: 10px;
   padding: 22px 24px;
-  border-radius: 18px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.16);
   border: none;
 }
@@ -687,7 +687,7 @@ svg {
   gap: 14px;
   background: #ffffff;
   border: 1px solid #E2E3E5;
-  border-radius: 18px;
+  border-radius: 12px;
   padding: 14px 20px;
   box-shadow: 0 12px 30px rgba(31, 45, 61, 0.06);
 }
@@ -716,7 +716,7 @@ svg {
   background: #4E79A7;
   color: #ffffff;
   padding: 12px 18px;
-  border-radius: 14px;
+  border-radius: 8px;
   font-weight: 700;
   font-size: 0.88rem;
   cursor: pointer;

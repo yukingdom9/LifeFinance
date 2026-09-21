@@ -119,7 +119,7 @@ function valueToY(value, margin, plotHeight, maxValue) {
 // 背景と、グラフ本体の白いプロットエリアを描画する（svgの中身は毎回描き直すため一旦クリアする）。
 function drawChartFrame(svg, width, height, margin, plotWidth, plotHeight) {
   svg.innerHTML = "";
-  svg.appendChild(svgEl("rect", { x: 0, y: 0, width, height, fill: "#F0F0F1", rx: 20 }));
+  svg.appendChild(svgEl("rect", { x: 0, y: 0, width, height, fill: "#F0F0F1", rx: 12 }));
   svg.appendChild(
     svgEl("rect", {
       x: margin.left,
